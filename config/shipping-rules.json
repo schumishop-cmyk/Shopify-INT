@@ -1,0 +1,191 @@
+{
+  "_comment": "Versandregeln für Lokalsportfan.de — Priorität: niedrigere Zahl = wird zuerst geprüft",
+  "currency": "EUR",
+  "weightUnit": "g",
+  "rules": [
+    {
+      "id": "free-de-threshold",
+      "name": "Kostenloser Versand DE (ab 50 EUR)",
+      "priority": 10,
+      "enabled": true,
+      "conditions": {
+        "destinationCountries": ["DE"],
+        "minCartPrice": 5000
+      },
+      "rates": [
+        {
+          "serviceName": "Kostenloser Versand",
+          "serviceCode": "free-standard-de",
+          "price": 0,
+          "description": "2–5 Werktage",
+          "minDeliveryDays": 2,
+          "maxDeliveryDays": 5
+        }
+      ]
+    },
+    {
+      "id": "standard-de-light",
+      "name": "Standardversand DE (bis 2 kg)",
+      "priority": 20,
+      "enabled": true,
+      "conditions": {
+        "destinationCountries": ["DE"],
+        "maxWeightGrams": 2000,
+        "maxCartPrice": 4999
+      },
+      "rates": [
+        {
+          "serviceName": "DHL Paket (2–5 Werktage)",
+          "serviceCode": "dhl-standard-de",
+          "price": 495,
+          "description": "Standardlieferung 2–5 Werktage",
+          "minDeliveryDays": 2,
+          "maxDeliveryDays": 5
+        },
+        {
+          "serviceName": "DHL Express (1–2 Werktage)",
+          "serviceCode": "dhl-express-de",
+          "price": 995,
+          "description": "Expresslieferung 1–2 Werktage",
+          "minDeliveryDays": 1,
+          "maxDeliveryDays": 2
+        }
+      ]
+    },
+    {
+      "id": "standard-de-heavy",
+      "name": "Standardversand DE (2–10 kg)",
+      "priority": 21,
+      "enabled": true,
+      "conditions": {
+        "destinationCountries": ["DE"],
+        "minWeightGrams": 2001,
+        "maxWeightGrams": 10000
+      },
+      "rates": [
+        {
+          "serviceName": "DHL Paket Schwer (2–5 Werktage)",
+          "serviceCode": "dhl-heavy-de",
+          "price": 795,
+          "description": "Lieferung 2–5 Werktage",
+          "minDeliveryDays": 2,
+          "maxDeliveryDays": 5
+        }
+      ]
+    },
+    {
+      "id": "standard-de-oversize",
+      "name": "Sperrgutversand DE (über 10 kg)",
+      "priority": 22,
+      "enabled": true,
+      "conditions": {
+        "destinationCountries": ["DE"],
+        "minWeightGrams": 10001
+      },
+      "rates": [
+        {
+          "serviceName": "Sperrgut / Spedition",
+          "serviceCode": "freight-de",
+          "price": 2490,
+          "description": "Sperrgutlieferung 5–10 Werktage",
+          "minDeliveryDays": 5,
+          "maxDeliveryDays": 10
+        }
+      ]
+    },
+    {
+      "id": "free-eu-threshold",
+      "name": "Kostenloser Versand EU (ab 100 EUR)",
+      "priority": 30,
+      "enabled": true,
+      "conditions": {
+        "destinationCountries": ["AT", "BE", "BG", "CY", "CZ", "DK", "EE", "ES", "FI", "FR", "GR", "HR", "HU", "IE", "IT", "LT", "LU", "LV", "MT", "NL", "PL", "PT", "RO", "SE", "SI", "SK"],
+        "minCartPrice": 10000
+      },
+      "rates": [
+        {
+          "serviceName": "Kostenloser EU-Versand",
+          "serviceCode": "free-standard-eu",
+          "price": 0,
+          "description": "5–10 Werktage",
+          "minDeliveryDays": 5,
+          "maxDeliveryDays": 10
+        }
+      ]
+    },
+    {
+      "id": "standard-eu",
+      "name": "Standardversand EU",
+      "priority": 40,
+      "enabled": true,
+      "conditions": {
+        "destinationCountries": ["AT", "BE", "BG", "CY", "CZ", "DK", "EE", "ES", "FI", "FR", "GR", "HR", "HU", "IE", "IT", "LT", "LU", "LV", "MT", "NL", "PL", "PT", "RO", "SE", "SI", "SK"]
+      },
+      "rates": [
+        {
+          "serviceName": "DHL International (5–10 Werktage)",
+          "serviceCode": "dhl-standard-eu",
+          "price": 1290,
+          "description": "Versand innerhalb der EU",
+          "minDeliveryDays": 5,
+          "maxDeliveryDays": 10
+        }
+      ]
+    },
+    {
+      "id": "standard-ch-gb",
+      "name": "Versand Schweiz & UK",
+      "priority": 50,
+      "enabled": true,
+      "conditions": {
+        "destinationCountries": ["CH", "GB"]
+      },
+      "rates": [
+        {
+          "serviceName": "DHL International (7–12 Werktage)",
+          "serviceCode": "dhl-ch-gb",
+          "price": 1690,
+          "description": "Internationaler Versand",
+          "minDeliveryDays": 7,
+          "maxDeliveryDays": 12
+        }
+      ]
+    },
+    {
+      "id": "tag-bulky-surcharge",
+      "name": "Aufpreis für Sperrgut-Produkte",
+      "priority": 5,
+      "enabled": true,
+      "conditions": {
+        "requireProductTags": ["sperrgut", "bulky"]
+      },
+      "rates": [
+        {
+          "serviceName": "Sperrgutlieferung",
+          "serviceCode": "bulky-delivery",
+          "price": 2990,
+          "description": "Sondertransport für sperrige Artikel",
+          "minDeliveryDays": 5,
+          "maxDeliveryDays": 14
+        }
+      ]
+    },
+    {
+      "id": "fallback-worldwide",
+      "name": "Weltweiter Versand (Fallback)",
+      "priority": 999,
+      "enabled": true,
+      "conditions": {},
+      "rates": [
+        {
+          "serviceName": "Internationaler Versand",
+          "serviceCode": "intl-standard",
+          "price": 2490,
+          "description": "Internationaler Versand 10–21 Werktage",
+          "minDeliveryDays": 10,
+          "maxDeliveryDays": 21
+        }
+      ]
+    }
+  ]
+}
