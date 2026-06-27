@@ -1,49 +1,87 @@
 const request = require('supertest');
 
-// Stub the rule loader so the server doesn't read from disk
-jest.mock('../../rules/loader', () => ({
-  loadRules: () => [
+// Stub DB modules — no real SQLite in tests
+jest.mock('../../db/rules', () => ({
+  getRulesForShop: () => [
     {
-      id: 'standard-de',
-      name: 'Standard DE',
-      priority: 10,
-      enabled: true,
+      id: 1, shop: 'test.myshopify.com', rule_id: 'standard-de',
+      name: 'Standard DE', priority: 10, enabled: true,
+      updated_at: '2026-01-01',
       conditions: { destinationCountries: ['DE'] },
       rates: [{ serviceName: 'Standard', serviceCode: 'std', price: 495, description: '', minDeliveryDays: 2, maxDeliveryDays: 5 }],
     },
   ],
 }));
 
+jest.mock('../../db/shops', () => ({
+  getShop: { get: (shop) => shop === 'test.myshopify.com' ? { shop, access_token: 'tok', uninstalled_at: null } : null },
+  upsertShop: { run: jest.fn() },
+  setCarrierServiceId: { run: jest.fn() },
+  markUninstalled: { run: jest.fn() },
+}));
+
+jest.mock('../../db/sessionStorage', () => ({
+  storeSession: jest.fn(),
+  loadSession: jest.fn(),
+  deleteSession: jest.fn(),
+  deleteSessions: jest.fn(),
+  findSessionsByShop: jest.fn(),
+}));
+
+jest.mock('../../db/database', () => ({
+  prepare: () => ({ run: jest.fn(), get: jest.fn(), all: jest.fn() }),
+  exec: jest.fn(),
+  pragma: jest.fn(),
+  transaction: jest.fn(() => jest.fn()),
+}));
+
 const app = require('../../server');
 
-const validPayload = {
+const validPayload = (country = 'DE') => ({
   rate: {
     origin: { country: 'DE', postal_code: '10115', city: 'Berlin', address1: 'Unter den Linden 1' },
-    destination: { country: 'DE', postal_code: '80331', city: 'München', name: 'Test', address1: 'Kaufingerstraße 1' },
+    destination: { country, postal_code: '80331', city: 'München', name: 'Test', address1: 'Str 1' },
     items: [{ name: 'Item', sku: 'X', quantity: 1, grams: 500, price: 3500, requires_shipping: true, product_tags: [] }],
     currency: 'EUR',
     locale: 'de',
   },
-};
+});
 
 describe('POST /api/carrier-service', () => {
-  test('returns rates for valid DE payload', async () => {
-    const res = await request(app).post('/api/carrier-service').send(validPayload);
+  test('returns 400 when shop param missing', async () => {
+    const res = await request(app).post('/api/carrier-service').send(validPayload());
+    expect(res.status).toBe(400);
+  });
+
+  test('returns 404 for unknown shop', async () => {
+    const res = await request(app)
+      .post('/api/carrier-service?shop=unknown.myshopify.com')
+      .send(validPayload());
+    expect(res.status).toBe(404);
+  });
+
+  test('returns rates for known shop + valid DE payload', async () => {
+    const res = await request(app)
+      .post('/api/carrier-service?shop=test.myshopify.com')
+      .send(validPayload('DE'));
     expect(res.status).toBe(200);
     expect(res.body.rates).toHaveLength(1);
     expect(res.body.rates[0].service_code).toBe('std');
   });
 
-  test('returns 400 for missing rate body', async () => {
-    const res = await request(app).post('/api/carrier-service').send({});
-    expect(res.status).toBe(400);
-  });
-
   test('returns empty rates for unknown country', async () => {
-    const payload = { rate: { ...validPayload.rate, destination: { ...validPayload.rate.destination, country: 'JP' } } };
-    const res = await request(app).post('/api/carrier-service').send(payload);
+    const res = await request(app)
+      .post('/api/carrier-service?shop=test.myshopify.com')
+      .send(validPayload('JP'));
     expect(res.status).toBe(200);
     expect(res.body.rates).toHaveLength(0);
+  });
+
+  test('returns 400 for missing rate body', async () => {
+    const res = await request(app)
+      .post('/api/carrier-service?shop=test.myshopify.com')
+      .send({});
+    expect(res.status).toBe(400);
   });
 
   test('GET /health returns ok', async () => {

@@ -1,25 +1,26 @@
 require('dotenv').config();
-const { shopifyApi, ApiVersion, Session } = require('@shopify/shopify-api');
+require('@shopify/shopify-api/adapters/node');
+const { shopifyApi, ApiVersion, LogSeverity } = require('@shopify/shopify-api');
 const { restResources } = require('@shopify/shopify-api/rest/admin/2024-01');
+const sessionStorage = require('../db/sessionStorage');
 
-const shopify = shopifyApi({
-  apiKey: process.env.SHOPIFY_API_KEY || 'n/a',
-  apiSecretKey: process.env.SHOPIFY_API_SECRET || 'n/a',
-  adminApiAccessToken: process.env.SHOPIFY_ACCESS_TOKEN,
-  hostName: process.env.SHOPIFY_SHOP_DOMAIN || '',
-  apiVersion: ApiVersion.January24,
-  isEmbeddedApp: false,
-  restResources,
-});
-
-function getSession() {
-  return new Session({
-    id: 'offline_session',
-    shop: process.env.SHOPIFY_SHOP_DOMAIN,
-    state: '',
-    isOnline: false,
-    accessToken: process.env.SHOPIFY_ACCESS_TOKEN,
-  });
+if (!process.env.SHOPIFY_API_KEY || !process.env.SHOPIFY_API_SECRET) {
+  if (process.env.NODE_ENV !== 'test') {
+    console.warn('[shopify] SHOPIFY_API_KEY / SHOPIFY_API_SECRET not set — OAuth disabled');
+  }
 }
 
-module.exports = { shopify, getSession };
+const shopify = shopifyApi({
+  apiKey: process.env.SHOPIFY_API_KEY || 'test-key',
+  apiSecretKey: process.env.SHOPIFY_API_SECRET || 'test-secret',
+  scopes: ['write_shipping', 'read_shipping'],
+  hostName: (process.env.PUBLIC_URL || 'localhost:3000').replace(/^https?:\/\//, ''),
+  hostScheme: process.env.PUBLIC_URL?.startsWith('https') ? 'https' : 'http',
+  apiVersion: ApiVersion.January24,
+  isEmbeddedApp: true,
+  sessionStorage,
+  restResources,
+  logger: { level: process.env.NODE_ENV === 'production' ? LogSeverity.Warning : LogSeverity.Info },
+});
+
+module.exports = shopify;

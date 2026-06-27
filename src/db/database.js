@@ -1,0 +1,56 @@
+const Database = require('better-sqlite3');
+const path = require('path');
+const fs = require('fs');
+
+const DB_DIR = path.resolve(__dirname, '../../data');
+const DB_PATH = path.join(DB_DIR, 'app.db');
+
+if (!fs.existsSync(DB_DIR)) fs.mkdirSync(DB_DIR, { recursive: true });
+
+const db = new Database(DB_PATH);
+db.pragma('journal_mode = WAL');
+db.pragma('foreign_keys = ON');
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS sessions (
+    id           TEXT PRIMARY KEY,
+    shop         TEXT NOT NULL,
+    state        TEXT,
+    is_online    INTEGER NOT NULL DEFAULT 0,
+    access_token TEXT,
+    scope        TEXT,
+    expires      TEXT,
+    online_data  TEXT,
+    created_at   TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at   TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_sessions_shop ON sessions(shop);
+
+  CREATE TABLE IF NOT EXISTS shops (
+    shop             TEXT PRIMARY KEY,
+    access_token     TEXT NOT NULL,
+    scope            TEXT,
+    carrier_service_id INTEGER,
+    installed_at     TEXT NOT NULL DEFAULT (datetime('now')),
+    uninstalled_at   TEXT
+  );
+
+  CREATE TABLE IF NOT EXISTS shipping_rules (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    shop        TEXT NOT NULL REFERENCES shops(shop) ON DELETE CASCADE,
+    rule_id     TEXT NOT NULL,
+    name        TEXT NOT NULL,
+    priority    INTEGER NOT NULL DEFAULT 100,
+    enabled     INTEGER NOT NULL DEFAULT 1,
+    conditions  TEXT NOT NULL DEFAULT '{}',
+    rates       TEXT NOT NULL DEFAULT '[]',
+    created_at  TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at  TEXT NOT NULL DEFAULT (datetime('now')),
+    UNIQUE(shop, rule_id)
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_rules_shop ON shipping_rules(shop);
+`);
+
+module.exports = db;
