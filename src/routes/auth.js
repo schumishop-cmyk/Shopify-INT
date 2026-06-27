@@ -53,7 +53,7 @@ async function registerCarrierService(shop, token) {
   const body = JSON.stringify({
     carrier_service: {
       name: 'Shopify-INT Versandregeln',
-      callback_url: `${publicUrl}/api/carrier-service`,
+      callback_url: `${publicUrl}/api/carrier-service?shop=${encodeURIComponent(shop)}`,
       service_discovery: true,
       format: 'json',
     },

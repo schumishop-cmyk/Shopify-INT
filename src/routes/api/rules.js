@@ -1,13 +1,10 @@
 const { Router } = require('express');
-const { requireSession } = require('../../middleware/requireSession');
+const { requireShopHeader } = require('../../middleware/requireSession');
 const rulesDb = require('../../db/rules');
 const logger = require('../../utils/logger');
-const { v4: uuidv4 } = (() => {
-  try { return require('crypto'); } catch { return { v4: () => Date.now().toString(36) }; }
-})();
 
 const router = Router();
-router.use(requireSession);
+router.use(requireShopHeader);
 
 /** GET /api/rules — list all rules for the authenticated shop */
 router.get('/', (req, res) => {

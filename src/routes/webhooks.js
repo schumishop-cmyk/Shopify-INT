@@ -25,7 +25,9 @@ function verifyWebhookHmac(req, res, next) {
     .update(req.rawBody || '')
     .digest('base64');
 
-  if (!crypto.timingSafeEqual(Buffer.from(digest), Buffer.from(hmac))) {
+  const digestBuf = Buffer.from(digest);
+  const hmacBuf = Buffer.from(hmac);
+  if (digestBuf.length !== hmacBuf.length || !crypto.timingSafeEqual(digestBuf, hmacBuf)) {
     logger.warn('Webhook HMAC mismatch');
     return res.status(401).send('Unauthorized');
   }

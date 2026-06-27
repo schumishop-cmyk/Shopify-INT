@@ -26,7 +26,7 @@ if (!SHOP || !TOKEN || !PUBLIC_URL) {
 const body = JSON.stringify({
   carrier_service: {
     name: 'Shopify-INT Versandregeln',
-    callback_url: `${PUBLIC_URL}/api/carrier-service`,
+    callback_url: `${PUBLIC_URL}/api/carrier-service?shop=${encodeURIComponent(SHOP)}`,
     service_discovery: true,
     format: 'json',
   },

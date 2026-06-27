@@ -6,6 +6,7 @@ const { handleCarrierRequest } = require('./carrier');
 const authRouter = require('./routes/auth');
 const webhooksRouter = require('./routes/webhooks');
 const rulesRouter = require('./routes/api/rules');
+const legalRouter = require('./routes/legal');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -26,6 +27,9 @@ app.use('/api/rules', rulesRouter);
 
 // Carrier service callback (called by Shopify at checkout)
 app.post('/api/carrier-service', handleCarrierRequest);
+
+// Legal pages (privacy policy, terms — required for App Store)
+app.use(legalRouter);
 
 // Health check
 app.get('/health', (_req, res) => {
