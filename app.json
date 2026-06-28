@@ -1,6 +1,7 @@
 {
   "name": "Shopify-INT Versandregeln",
   "handle": "shopify-int-versandregeln",
+  "client_id": "9193536353d7d304a0c2414989304fb1",
   "description": "Konfiguriere erweiterte Versandkostenregeln direkt im Shopify-Adminbereich. Unterstützt Gewichts-, Preis- und Länderzonen, Produkttag-Bedingungen, Freiversandgrenzen und mehrere Carrier-Optionen pro Regel.",
   "website_url": "https://your-app.railway.app",
   "privacy_policy_url": "https://your-app.railway.app/privacy-policy",
