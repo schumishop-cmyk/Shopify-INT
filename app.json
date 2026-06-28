@@ -3,18 +3,18 @@
   "handle": "shopify-int-versandregeln",
   "client_id": "9193536353d7d304a0c2414989304fb1",
   "description": "Konfiguriere erweiterte Versandkostenregeln direkt im Shopify-Adminbereich. Unterstützt Gewichts-, Preis- und Länderzonen, Produkttag-Bedingungen, Freiversandgrenzen und mehrere Carrier-Optionen pro Regel.",
-  "website_url": "https://your-app.railway.app",
-  "privacy_policy_url": "https://your-app.railway.app/privacy-policy",
+  "website_url": "https://mybridge.railway.app",
+  "privacy_policy_url": "https://mybridge.railway.app/privacy-policy",
   "support_url": "mailto:schumishop@gmail.com",
-  "terms_and_conditions_url": "https://your-app.railway.app/terms",
-  "app_url": "https://your-app.railway.app",
+  "terms_and_conditions_url": "https://mybridge.railway.app/terms",
+  "app_url": "https://mybridge.railway.app",
   "embedded": true,
   "scopes": ["write_shipping", "read_shipping"],
   "webhooks": {
     "gdpr": {
-      "customers_data_request": "https://your-app.railway.app/webhooks/customers/data_request",
-      "customers_redact": "https://your-app.railway.app/webhooks/customers/redact",
-      "shop_redact": "https://your-app.railway.app/webhooks/shop/redact"
+      "customers_data_request": "https://mybridge.railway.app/webhooks/customers/data_request",
+      "customers_redact": "https://mybridge.railway.app/webhooks/customers/redact",
+      "shop_redact": "https://mybridge.railway.app/webhooks/shop/redact"
     }
   }
 }
