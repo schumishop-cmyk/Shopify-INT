@@ -1,0 +1,40 @@
+# Shopify App-Konfiguration
+# Docs: https://shopify.dev/docs/apps/build/cli-for-apps/app-configuration
+#
+# Änderungen an dieser Datei werden mit `shopify app deploy` als neue
+# App-Version ins Partner Dashboard gepusht (dort erschien z.B. mybridge-2).
+
+name = "Mybridge"
+client_id = "9193536353d7d304a0c2414989304fb1"
+application_url = "https://mybridge.railway.app"
+embedded = true
+
+[access_scopes]
+scopes = "write_shipping"
+
+[auth]
+redirect_urls = [
+  "https://mybridge.railway.app/auth/callback"
+]
+
+[webhooks]
+api_version = "2024-01"
+
+  # Wird für alle installierenden Shops automatisch abonniert
+  [[webhooks.subscriptions]]
+  topics = ["app/uninstalled"]
+  uri = "https://mybridge.railway.app/webhooks/app/uninstalled"
+
+  # GDPR-Pflicht-Webhooks — nur hier oder im Partner Dashboard konfigurierbar,
+  # nicht über die Admin API
+  [[webhooks.subscriptions]]
+  compliance_topics = ["customers/data_request"]
+  uri = "https://mybridge.railway.app/webhooks/customers/data_request"
+
+  [[webhooks.subscriptions]]
+  compliance_topics = ["customers/redact"]
+  uri = "https://mybridge.railway.app/webhooks/customers/redact"
+
+  [[webhooks.subscriptions]]
+  compliance_topics = ["shop/redact"]
+  uri = "https://mybridge.railway.app/webhooks/shop/redact"

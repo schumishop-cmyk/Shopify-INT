@@ -17,16 +17,19 @@ function getEngine(shop, rules) {
   return engine;
 }
 
+/**
+ * Shopify does not sign carrier service callbacks, so the callback URL we
+ * register contains a secret token (?token=...). Only requests carrying it
+ * are served — without this, anyone who guesses the URL could enumerate a
+ * shop's shipping rates.
+ */
 function verifyRequest(req) {
   const secret = process.env.CARRIER_SERVICE_SECRET;
-  if (!secret) return true;
+  if (!secret) return true; // not configured (dev only)
 
-  const hmacHeader = req.headers['x-shopify-hmac-sha256'];
-  if (!hmacHeader) return true;
-
-  const body = req.rawBody || JSON.stringify(req.body);
-  const digest = crypto.createHmac('sha256', secret).update(body).digest('base64');
-  return crypto.timingSafeEqual(Buffer.from(digest), Buffer.from(hmacHeader));
+  const given = Buffer.from(String(req.query.token || ''));
+  const expected = Buffer.from(secret);
+  return given.length === expected.length && crypto.timingSafeEqual(given, expected);
 }
 
 /**
@@ -38,7 +41,7 @@ function verifyRequest(req) {
  */
 async function handleCarrierRequest(req, res) {
   if (!verifyRequest(req)) {
-    logger.warn('Invalid HMAC signature on carrier request');
+    logger.warn('Carrier request rejected: invalid or missing token', { shop: req.query.shop });
     return res.status(401).json({ error: 'Unauthorized' });
   }
 

@@ -95,11 +95,12 @@ if (!fs.existsSync(envPath)) {
 }
 
 const REQUIRED_VARS = {
-  SHOPIFY_SHOP_DOMAIN:  'z.B. lokalsportfan.myshopify.com',
-  SHOPIFY_ACCESS_TOKEN: 'shpat_...',
-  SHOPIFY_API_KEY:      'aus dem Partner Dashboard',
-  SHOPIFY_API_SECRET:   'aus dem Partner Dashboard',
-  PUBLIC_URL:           'https://deine-app.railway.app',
+  SHOPIFY_SHOP_DOMAIN:    'z.B. lokalsportfan.myshopify.com',
+  SHOPIFY_ACCESS_TOKEN:   'shpat_...',
+  SHOPIFY_API_KEY:        'aus dem Partner Dashboard',
+  SHOPIFY_API_SECRET:     'aus dem Partner Dashboard',
+  PUBLIC_URL:             'https://deine-app.railway.app',
+  CARRIER_SERVICE_SECRET: 'sichert den Carrier-Endpunkt ab (32+ zufällige Zeichen)',
 };
 
 let missingVars = false;
@@ -209,10 +210,11 @@ step(5, 'Carrier Service bei Shopify registrieren');
     ok(`Callback: ${existing.callback_url}`);
     record('Carrier Service', 'skipped', `ID ${existing.id}`);
   } else {
-    const callbackUrl = `${PUBLIC}/api/carrier-service?shop=${encodeURIComponent(SHOP)}`;
+    const callbackParams = new URLSearchParams({ shop: SHOP, token: process.env.CARRIER_SERVICE_SECRET });
+    const callbackUrl = `${PUBLIC}/api/carrier-service?${callbackParams}`;
     const res = await shopifyRequest('POST', '/admin/api/2024-01/carrier_services.json', TOKEN, {
       carrier_service: {
-        name: 'Shopify-INT Versandregeln',
+        name: 'Mybridge Versandregeln',
         callback_url: callbackUrl,
         service_discovery: true,
         format: 'json',
@@ -221,7 +223,7 @@ step(5, 'Carrier Service bei Shopify registrieren');
 
     if (res.status === 201) {
       ok(`Carrier Service registriert (ID: ${res.body.carrier_service.id})`);
-      ok(`Callback: ${callbackUrl}`);
+      ok(`Callback: ${callbackUrl.replace(process.env.CARRIER_SERVICE_SECRET, '***')}`);
 
       // ID in DB speichern
       try {
@@ -247,11 +249,14 @@ step(5, 'Carrier Service bei Shopify registrieren');
   // ═════════════════════════════════════════════════════════════════════════════
   step(6, 'Webhooks registrieren');
 
+  // Die drei GDPR-Compliance-Webhooks (customers/data_request, customers/redact,
+  // shop/redact) können NICHT über die Admin API registriert werden — Shopify
+  // erlaubt das nur über das Partner Dashboard oder shopify.app.toml.
+  info('GDPR-Webhooks werden über shopify.app.toml / Partner Dashboard verwaltet — nicht per API.');
+  record('GDPR-Webhooks', 'skipped', 'via shopify.app.toml');
+
   const webhooks = [
-    { topic: 'app/uninstalled',           address: `${PUBLIC}/webhooks/app/uninstalled` },
-    { topic: 'customers/data_request',    address: `${PUBLIC}/webhooks/customers/data_request` },
-    { topic: 'customers/redact',          address: `${PUBLIC}/webhooks/customers/redact` },
-    { topic: 'shop/redact',               address: `${PUBLIC}/webhooks/shop/redact` },
+    { topic: 'app/uninstalled', address: `${PUBLIC}/webhooks/app/uninstalled` },
   ];
 
   const existingHooks = await shopifyRequest('GET', '/admin/api/2024-01/webhooks.json', TOKEN);

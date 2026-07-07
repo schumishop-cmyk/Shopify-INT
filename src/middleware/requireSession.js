@@ -1,47 +1,40 @@
-const shopify = require('../shopify/client');
+const { verifySessionToken } = require('../utils/sessionToken');
 const { getShop } = require('../db/shops');
+const logger = require('../utils/logger');
 
 /**
- * Verifies that the request has a valid Shopify session (offline token).
- * For API routes called from the embedded app the session token is passed
- * in the Authorization header as a Bearer JWT.
+ * Authenticates embedded-app API requests via App Bridge session tokens.
+ *
+ * The frontend fetches a short-lived JWT with shopify.idToken() and sends it
+ * as `Authorization: Bearer <token>`. We verify the HS256 signature against
+ * our API secret — the shop identity comes from the verified `dest` claim,
+ * never from a client-controlled header.
  */
-async function requireSession(req, res, next) {
-  try {
-    const sessionId = await shopify.session.getCurrentId({
-      isOnline: false,
-      rawRequest: req,
-      rawResponse: res,
-    });
-
-    if (!sessionId) return res.status(401).json({ error: 'No session' });
-
-    const session = await shopify.config.sessionStorage.loadSession(sessionId);
-    if (!session?.accessToken) return res.status(401).json({ error: 'Session invalid or expired' });
-
-    // Attach shop context to request
-    req.shopSession = session;
-    req.shop = session.shop;
-    next();
-  } catch (err) {
-    return res.status(401).json({ error: 'Unauthorized', detail: err.message });
+function requireSessionToken(req, res, next) {
+  const match = /^Bearer (.+)$/.exec(req.headers.authorization || '');
+  if (!match) {
+    return res.status(401).json({ error: 'Missing session token' });
   }
-}
 
-/**
- * Lightweight alternative: verify via X-Shop-Domain header + DB lookup.
- * Used for the carrier service endpoint where we verify by access token.
- */
-async function requireShopHeader(req, res, next) {
-  const shop = req.headers['x-shop-domain'];
-  if (!shop) return res.status(401).json({ error: 'Missing X-Shop-Domain header' });
+  let shop;
+  try {
+    ({ shop } = verifySessionToken(match[1], {
+      apiKey: process.env.SHOPIFY_API_KEY,
+      apiSecret: process.env.SHOPIFY_API_SECRET,
+    }));
+  } catch (err) {
+    logger.warn('Session token rejected', { reason: err.message });
+    return res.status(401).json({ error: 'Invalid session token' });
+  }
 
   const row = getShop.get(shop);
-  if (!row || row.uninstalled_at) return res.status(401).json({ error: 'Shop not found or uninstalled' });
+  if (!row || row.uninstalled_at) {
+    return res.status(401).json({ error: 'App not installed for this shop' });
+  }
 
   req.shop = shop;
   req.shopToken = row.access_token;
   next();
 }
 
-module.exports = { requireSession, requireShopHeader };
+module.exports = { requireSessionToken };

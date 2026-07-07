@@ -23,10 +23,15 @@ if (!SHOP || !TOKEN || !PUBLIC_URL) {
   process.exit(1);
 }
 
+const callbackParams = new URLSearchParams({ shop: SHOP });
+if (process.env.CARRIER_SERVICE_SECRET) {
+  callbackParams.set('token', process.env.CARRIER_SERVICE_SECRET);
+}
+
 const body = JSON.stringify({
   carrier_service: {
-    name: 'Shopify-INT Versandregeln',
-    callback_url: `${PUBLIC_URL}/api/carrier-service?shop=${encodeURIComponent(SHOP)}`,
+    name: 'Mybridge Versandregeln',
+    callback_url: `${PUBLIC_URL}/api/carrier-service?${callbackParams}`,
     service_discovery: true,
     format: 'json',
   },

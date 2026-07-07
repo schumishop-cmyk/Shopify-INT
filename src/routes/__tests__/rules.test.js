@@ -1,4 +1,9 @@
 const request = require('supertest');
+const { makeSessionToken } = require('../../testutils/makeSessionToken');
+
+// Session-token auth reads these at request time — set before requiring app
+process.env.SHOPIFY_API_KEY = 'test-api-key';
+process.env.SHOPIFY_API_SECRET = 'test-api-secret';
 
 // ── DB mocks ────────────────────────────────────────────────────────────────
 const mockRules = [
@@ -42,24 +47,52 @@ jest.mock('../../db/database', () => ({
 }));
 
 const app = require('../../server');
-const SHOP_HEADER = { 'X-Shop-Domain': 'test.myshopify.com', 'Content-Type': 'application/json' };
 
-describe('GET /api/rules', () => {
-  test('returns 401 without shop header', async () => {
+function authed(req) {
+  return req.set('Authorization', `Bearer ${makeSessionToken()}`);
+}
+
+describe('Session token authentication', () => {
+  test('returns 401 without Authorization header', async () => {
     const res = await request(app).get('/api/rules');
     expect(res.status).toBe(401);
   });
 
-  test('returns rules for valid shop', async () => {
-    const res = await request(app).get('/api/rules').set(SHOP_HEADER);
+  test('returns 401 for a forged token (wrong secret)', async () => {
+    const res = await request(app)
+      .get('/api/rules')
+      .set('Authorization', `Bearer ${makeSessionToken({ secret: 'attacker-secret' })}`);
+    expect(res.status).toBe(401);
+  });
+
+  test('returns 401 for a token issued to another app', async () => {
+    const res = await request(app)
+      .get('/api/rules')
+      .set('Authorization', `Bearer ${makeSessionToken({ aud: 'other-app-key' })}`);
+    expect(res.status).toBe(401);
+  });
+
+  test('returns 401 for a shop that has not installed the app', async () => {
+    const res = await request(app)
+      .get('/api/rules')
+      .set('Authorization', `Bearer ${makeSessionToken({ shop: 'stranger.myshopify.com' })}`);
+    expect(res.status).toBe(401);
+  });
+
+  test('the legacy X-Shop-Domain header grants no access', async () => {
+    const res = await request(app)
+      .get('/api/rules')
+      .set('X-Shop-Domain', 'test.myshopify.com');
+    expect(res.status).toBe(401);
+  });
+});
+
+describe('GET /api/rules', () => {
+  test('returns rules for a valid session token', async () => {
+    const res = await authed(request(app).get('/api/rules'));
     expect(res.status).toBe(200);
     expect(res.body.rules).toHaveLength(1);
     expect(res.body.rules[0].name).toBe('Standard DE');
-  });
-
-  test('returns empty list for unknown shop', async () => {
-    const res = await request(app).get('/api/rules').set({ 'X-Shop-Domain': 'unknown.myshopify.com' });
-    expect(res.status).toBe(401);
   });
 });
 
@@ -73,7 +106,6 @@ describe('POST /api/rules', () => {
   };
 
   test('creates a rule and returns 201', async () => {
-    // Mock getRule for the newly inserted row
     const rulesDb = require('../../db/rules');
     rulesDb.getRule.get.mockReturnValueOnce({
       id: 2, shop: 'test.myshopify.com', rule_id: 'rule-b',
@@ -82,35 +114,35 @@ describe('POST /api/rules', () => {
       rates: '[{"serviceName":"Express","serviceCode":"exp","price":995,"description":"1–2 Tage","minDeliveryDays":1,"maxDeliveryDays":2}]',
     });
 
-    const res = await request(app).post('/api/rules').set(SHOP_HEADER).send(validRule);
+    const res = await authed(request(app).post('/api/rules')).send(validRule);
     expect(res.status).toBe(201);
     expect(res.body.rule.name).toBe('Express DE');
   });
 
   test('returns 400 when name is missing', async () => {
-    const res = await request(app).post('/api/rules').set(SHOP_HEADER).send({ rates: [] });
+    const res = await authed(request(app).post('/api/rules')).send({ rates: [] });
     expect(res.status).toBe(400);
   });
 
   test('returns 400 when rates array is empty', async () => {
-    const res = await request(app).post('/api/rules').set(SHOP_HEADER).send({ name: 'Test', rates: [] });
+    const res = await authed(request(app).post('/api/rules')).send({ name: 'Test', rates: [] });
     expect(res.status).toBe(400);
   });
 });
 
 describe('PUT /api/rules/:id', () => {
   test('returns 404 for unknown rule', async () => {
-    const res = await request(app).put('/api/rules/999').set(SHOP_HEADER).send({ name: 'X', rates: [] });
+    const res = await authed(request(app).put('/api/rules/999')).send({ name: 'X', rates: [] });
     expect(res.status).toBe(404);
   });
 
   test('updates a rule for valid id', async () => {
     const rulesDb = require('../../db/rules');
     rulesDb.getRule.get
-      .mockReturnValueOnce(mockRules[0])  // existence check
-      .mockReturnValueOnce({ ...mockRules[0], name: 'Updated' });  // after update
+      .mockReturnValueOnce(mockRules[0])
+      .mockReturnValueOnce({ ...mockRules[0], name: 'Updated' });
 
-    const res = await request(app).put('/api/rules/1').set(SHOP_HEADER).send({ name: 'Updated' });
+    const res = await authed(request(app).put('/api/rules/1')).send({ name: 'Updated' });
     expect(res.status).toBe(200);
     expect(res.body.rule.name).toBe('Updated');
   });
@@ -118,14 +150,14 @@ describe('PUT /api/rules/:id', () => {
 
 describe('DELETE /api/rules/:id', () => {
   test('returns 404 for unknown rule', async () => {
-    const res = await request(app).delete('/api/rules/999').set(SHOP_HEADER);
+    const res = await authed(request(app).delete('/api/rules/999'));
     expect(res.status).toBe(404);
   });
 
   test('deletes existing rule', async () => {
     const rulesDb = require('../../db/rules');
     rulesDb.getRule.get.mockReturnValueOnce(mockRules[0]);
-    const res = await request(app).delete('/api/rules/1').set(SHOP_HEADER);
+    const res = await authed(request(app).delete('/api/rules/1'));
     expect(res.status).toBe(200);
   });
 });

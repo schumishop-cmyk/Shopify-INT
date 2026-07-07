@@ -1,10 +1,10 @@
 const { Router } = require('express');
-const { requireShopHeader } = require('../../middleware/requireSession');
+const { requireSessionToken } = require('../../middleware/requireSession');
 const rulesDb = require('../../db/rules');
 const logger = require('../../utils/logger');
 
 const router = Router();
-router.use(requireShopHeader);
+router.use(requireSessionToken);
 
 /** GET /api/rules — list all rules for the authenticated shop */
 router.get('/', (req, res) => {

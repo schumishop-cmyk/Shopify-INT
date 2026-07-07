@@ -4,8 +4,8 @@ import RuleList from './components/RuleList';
 import RuleFormModal from './components/RuleFormModal';
 import { useRules } from './hooks/useRules';
 
-export default function App({ shop }) {
-  const { rules, loading, error, createRule, updateRule, deleteRule, toggleRule } = useRules(shop);
+export default function App() {
+  const { rules, loading, error, createRule, updateRule, deleteRule, toggleRule } = useRules();
   const [modalOpen, setModalOpen] = useState(false);
   const [editingRule, setEditingRule] = useState(null);
   const [toast, setToast] = useState(null);
@@ -43,7 +43,7 @@ export default function App({ shop }) {
   const handleDelete = useCallback(async (rule) => {
     try {
       await deleteRule(rule.id);
-      showToast('Regel gel��scht');
+      showToast('Regel gelöscht');
     } catch (e) {
       showToast(e.message, true);
     }

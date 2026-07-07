@@ -35,8 +35,11 @@ router.get('/auth/callback', async (req, res) => {
 
     logger.info('Shop installed', { shop: session.shop });
 
-    const host = req.query.host;
-    return res.redirect(`/?shop=${session.shop}&host=${host}`);
+    // Embedded app: send the merchant back into the Shopify admin,
+    // where our app loads inside the iframe with App Bridge.
+    return res.redirect(
+      `https://${session.shop}/admin/apps/${process.env.SHOPIFY_API_KEY}`
+    );
   } catch (err) {
     logger.error('OAuth callback error', { error: err.message });
     return res.status(500).send('OAuth failed: ' + err.message);
@@ -50,10 +53,15 @@ async function registerCarrierService(shop, token) {
     return;
   }
 
+  const params = new URLSearchParams({ shop });
+  if (process.env.CARRIER_SERVICE_SECRET) {
+    params.set('token', process.env.CARRIER_SERVICE_SECRET);
+  }
+
   const body = JSON.stringify({
     carrier_service: {
-      name: 'Shopify-INT Versandregeln',
-      callback_url: `${publicUrl}/api/carrier-service?shop=${encodeURIComponent(shop)}`,
+      name: 'Mybridge Versandregeln',
+      callback_url: `${publicUrl}/api/carrier-service?${params}`,
       service_discovery: true,
       format: 'json',
     },
