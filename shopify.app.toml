@@ -4,8 +4,8 @@
 # Änderungen an dieser Datei werden mit `shopify app deploy` als neue
 # App-Version ins Partner Dashboard gepusht (dort erschien z.B. mybridge-2).
 
-name = "Mybridge"
-client_id = "9193536353d7d304a0c2414989304fb1"
+name = "Shipping Rules App"
+client_id = "e8c2278c90acbdc6a401a9ec2c86c368"
 application_url = "https://shopify-int-production.up.railway.app"
 embedded = true
 
