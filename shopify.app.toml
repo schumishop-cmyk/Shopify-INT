@@ -11,6 +11,9 @@ embedded = true
 
 [access_scopes]
 scopes = "write_shipping"
+# Unser Server nutzt den klassischen OAuth-Flow (/auth/begin → /auth/callback),
+# nicht Shopify managed installation
+use_legacy_install_flow = true
 
 [auth]
 redirect_urls = [
