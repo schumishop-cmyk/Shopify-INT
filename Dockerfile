@@ -23,9 +23,10 @@ COPY package*.json ./
 COPY src/ ./src/
 COPY config/ ./config/
 
-# SQLite data directory (mount a volume here in production)
+# SQLite data directory — attach persistent storage here in production
+# (Railway: Volume im Dashboard anlegen, mountPath /app/data; Railway
+# unterstützt die Docker-VOLUME-Anweisung nicht)
 RUN mkdir -p /app/data && chown node:node /app/data
-VOLUME ["/app/data"]
 
 USER node
 EXPOSE 3000
