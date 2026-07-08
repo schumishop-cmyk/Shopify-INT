@@ -2,10 +2,13 @@ import React, { useState, useCallback } from 'react';
 import { Page, Layout, Toast, Frame } from '@shopify/polaris';
 import RuleList from './components/RuleList';
 import RuleFormModal from './components/RuleFormModal';
+import CarrierBanner from './components/CarrierBanner';
 import { useRules } from './hooks/useRules';
+import { useCarrierStatus } from './hooks/useCarrierStatus';
 
 export default function App() {
   const { rules, loading, error, createRule, updateRule, deleteRule, toggleRule } = useRules();
+  const carrier = useCarrierStatus();
   const [modalOpen, setModalOpen] = useState(false);
   const [editingRule, setEditingRule] = useState(null);
   const [toast, setToast] = useState(null);
@@ -65,6 +68,18 @@ export default function App() {
         primaryAction={{ content: 'Neue Regel', onAction: handleCreate }}
       >
         <Layout>
+          <Layout.Section>
+            <CarrierBanner
+              status={carrier.status}
+              checking={carrier.checking}
+              registering={carrier.registering}
+              error={carrier.error}
+              onRegister={async () => {
+                const ok = await carrier.register();
+                showToast(ok ? 'Versanddienst registriert' : 'Registrierung fehlgeschlagen', !ok);
+              }}
+            />
+          </Layout.Section>
           <Layout.Section>
             <RuleList
               rules={rules}

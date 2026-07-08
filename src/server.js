@@ -6,6 +6,7 @@ const { handleCarrierRequest } = require('./carrier');
 const authRouter = require('./routes/auth');
 const webhooksRouter = require('./routes/webhooks');
 const rulesRouter = require('./routes/api/rules');
+const carrierApiRouter = require('./routes/api/carrier');
 const legalRouter = require('./routes/legal');
 
 const app = express();
@@ -24,6 +25,9 @@ app.use(webhooksRouter);
 
 // Rules CRUD API (session-protected)
 app.use('/api/rules', rulesRouter);
+
+// Carrier service status + on-demand registration (session-protected)
+app.use('/api/carrier', carrierApiRouter);
 
 // Carrier service callback (called by Shopify at checkout)
 app.post('/api/carrier-service', handleCarrierRequest);

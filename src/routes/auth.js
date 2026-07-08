@@ -1,9 +1,9 @@
 const { Router } = require('express');
 const shopify = require('../shopify/client');
-const { upsertShop, setCarrierServiceId } = require('../db/shops');
+const { upsertShop } = require('../db/shops');
 const { seedDefaultRules } = require('../db/rules');
+const { registerCarrierService } = require('../shopify/carrierRegistration');
 const logger = require('../utils/logger');
-const https = require('https');
 
 const router = Router();
 
@@ -31,7 +31,13 @@ router.get('/auth/callback', async (req, res) => {
     });
 
     seedDefaultRules(session.shop);
-    await registerCarrierService(session.shop, session.accessToken);
+
+    // Best-effort: registration may fail if the shop's plan hasn't enabled
+    // carrier-calculated shipping yet. The merchant can retry from the app UI.
+    const result = await registerCarrierService(session.shop, session.accessToken);
+    if (!result.ok) {
+      logger.warn('Carrier registration deferred to manual retry', { shop: session.shop, error: result.error });
+    }
 
     logger.info('Shop installed', { shop: session.shop });
 
@@ -45,67 +51,5 @@ router.get('/auth/callback', async (req, res) => {
     return res.status(500).send('OAuth failed: ' + err.message);
   }
 });
-
-async function registerCarrierService(shop, token) {
-  const publicUrl = process.env.PUBLIC_URL;
-  if (!publicUrl) {
-    logger.warn('PUBLIC_URL not set — skipping carrier service registration', { shop });
-    return;
-  }
-
-  const params = new URLSearchParams({ shop });
-  if (process.env.CARRIER_SERVICE_SECRET) {
-    params.set('token', process.env.CARRIER_SERVICE_SECRET);
-  }
-
-  const body = JSON.stringify({
-    carrier_service: {
-      name: 'Mybridge Versandregeln',
-      callback_url: `${publicUrl}/api/carrier-service?${params}`,
-      service_discovery: true,
-      format: 'json',
-    },
-  });
-
-  return new Promise((resolve) => {
-    const opts = {
-      hostname: shop,
-      path: '/admin/api/2024-01/carrier_services.json',
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Shopify-Access-Token': token,
-        'Content-Length': Buffer.byteLength(body),
-      },
-    };
-
-    const req = https.request(opts, (res) => {
-      let data = '';
-      res.on('data', (c) => { data += c; });
-      res.on('end', () => {
-        try {
-          const parsed = JSON.parse(data);
-          if (res.statusCode === 201) {
-            setCarrierServiceId.run(parsed.carrier_service.id, shop);
-            logger.info('Carrier service registered', { shop, id: parsed.carrier_service.id });
-          } else {
-            logger.warn('Carrier service registration failed', { shop, status: res.statusCode, body: data });
-          }
-        } catch (e) {
-          logger.error('Error parsing carrier registration response', { error: e.message });
-        }
-        resolve();
-      });
-    });
-
-    req.on('error', (e) => {
-      logger.error('Carrier registration request error', { error: e.message });
-      resolve();
-    });
-
-    req.write(body);
-    req.end();
-  });
-}
 
 module.exports = router;
