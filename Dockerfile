@@ -26,8 +26,10 @@ COPY config/ ./config/
 # SQLite data directory — attach persistent storage here in production
 # (Railway: Volume im Dashboard anlegen, mountPath /app/data; Railway
 # unterstützt die Docker-VOLUME-Anweisung nicht)
-RUN mkdir -p /app/data && chown node:node /app/data
+RUN mkdir -p /app/data
 
-USER node
+# Kein "USER node": Railway hängt Volumes zur Laufzeit als root ein, ein
+# nicht-root-Benutzer könnte dann nicht in /app/data schreiben
+# (SQLITE_CANTOPEN). Der Container läuft isoliert, root ist hier ok.
 EXPOSE 3000
 CMD ["node", "src/server.js"]

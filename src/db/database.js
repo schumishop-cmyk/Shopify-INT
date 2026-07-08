@@ -2,12 +2,23 @@ const Database = require('better-sqlite3');
 const path = require('path');
 const fs = require('fs');
 
-const DB_DIR = path.resolve(__dirname, '../../data');
+// Override with DB_DIR to point at a mounted volume (e.g. Railway /app/data)
+const DB_DIR = process.env.DB_DIR || path.resolve(__dirname, '../../data');
 const DB_PATH = path.join(DB_DIR, 'app.db');
 
 if (!fs.existsSync(DB_DIR)) fs.mkdirSync(DB_DIR, { recursive: true });
 
-const db = new Database(DB_PATH);
+let db;
+try {
+  db = new Database(DB_PATH);
+} catch (err) {
+  // Most common cause on Railway: the mounted volume at DB_DIR isn't
+  // writable by the container user (SQLITE_CANTOPEN)
+  throw new Error(
+    `Cannot open SQLite database at ${DB_PATH} (${err.code || err.message}). ` +
+    `Ensure the data directory is writable by the container user.`
+  );
+}
 db.pragma('journal_mode = WAL');
 db.pragma('foreign_keys = ON');
 
