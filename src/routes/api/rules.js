@@ -75,6 +75,22 @@ router.delete('/:id', (req, res) => {
   res.json({ message: 'Rule deleted' });
 });
 
+/**
+ * POST /api/rules/preview — simulate which rates a cart would get.
+ * Body: { destination: { country }, items: [{ grams, price, quantity, product_tags }] }
+ */
+router.post('/preview', (req, res) => {
+  const { destination, items } = req.body || {};
+  if (!destination?.country || !Array.isArray(items)) {
+    return res.status(400).json({ error: 'destination.country and items are required' });
+  }
+
+  const RuleEngine = require('../../rules/engine');
+  const engine = new RuleEngine(rulesDb.getRulesForShop(req.shop));
+  const rates = engine.evaluate({ destination, items, currency: 'EUR' });
+  res.json({ rates });
+});
+
 /** POST /api/rules/:id/toggle — quick enable/disable */
 router.post('/:id/toggle', (req, res) => {
   const existing = rulesDb.getRule.get(req.shop, req.params.id);

@@ -2,13 +2,13 @@ import React, { useState, useCallback } from 'react';
 import { Page, Layout, Toast, Frame } from '@shopify/polaris';
 import RuleList from './components/RuleList';
 import RuleFormModal from './components/RuleFormModal';
-import CarrierBanner from './components/CarrierBanner';
+import SyncCard from './components/SyncCard';
 import { useRules } from './hooks/useRules';
-import { useCarrierStatus } from './hooks/useCarrierStatus';
+import { useSync } from './hooks/useSync';
 
 export default function App() {
   const { rules, loading, error, createRule, updateRule, deleteRule, toggleRule } = useRules();
-  const carrier = useCarrierStatus();
+  const { lastSyncedAt, syncing, result, sync } = useSync();
   const [modalOpen, setModalOpen] = useState(false);
   const [editingRule, setEditingRule] = useState(null);
   const [toast, setToast] = useState(null);
@@ -69,14 +69,13 @@ export default function App() {
       >
         <Layout>
           <Layout.Section>
-            <CarrierBanner
-              status={carrier.status}
-              checking={carrier.checking}
-              registering={carrier.registering}
-              error={carrier.error}
-              onRegister={async () => {
-                const ok = await carrier.register();
-                showToast(ok ? 'Versanddienst registriert' : 'Registrierung fehlgeschlagen', !ok);
+            <SyncCard
+              lastSyncedAt={lastSyncedAt}
+              syncing={syncing}
+              result={result}
+              onSync={async () => {
+                const res = await sync();
+                showToast(res.ok ? 'Versandtarife synchronisiert' : 'Synchronisierung fehlgeschlagen', !res.ok);
               }}
             />
           </Layout.Section>

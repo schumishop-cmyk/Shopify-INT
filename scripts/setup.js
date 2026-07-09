@@ -95,12 +95,11 @@ if (!fs.existsSync(envPath)) {
 }
 
 const REQUIRED_VARS = {
-  SHOPIFY_SHOP_DOMAIN:    'z.B. lokalsportfan.myshopify.com',
-  SHOPIFY_ACCESS_TOKEN:   'shpat_...',
-  SHOPIFY_API_KEY:        'aus dem Partner Dashboard',
-  SHOPIFY_API_SECRET:     'aus dem Partner Dashboard',
-  PUBLIC_URL:             'https://deine-app.railway.app',
-  CARRIER_SERVICE_SECRET: 'sichert den Carrier-Endpunkt ab (32+ zufällige Zeichen)',
+  SHOPIFY_SHOP_DOMAIN: 'z.B. 2c99af-3.myshopify.com',
+  SHOPIFY_ACCESS_TOKEN: 'shpat_...',
+  SHOPIFY_API_KEY:     'aus dem Dev Dashboard',
+  SHOPIFY_API_SECRET:  'aus dem Dev Dashboard',
+  PUBLIC_URL:          'https://deine-app.railway.app',
 };
 
 let missingVars = false;
@@ -192,57 +191,18 @@ try {
 // ═══════════════════════════════════════════════════════════════════════════════
 // STEP 5 — Carrier Service registrieren
 // ═══════════════════════════════════════════════════════════════════════════════
-step(5, 'Carrier Service bei Shopify registrieren');
+step(5, 'Versandregeln-Bereitstellung');
 
 (async () => {
   const SHOP    = process.env.SHOPIFY_SHOP_DOMAIN;
   const TOKEN   = process.env.SHOPIFY_ACCESS_TOKEN;
   const PUBLIC  = process.env.PUBLIC_URL;
 
-  // Prüfen ob bereits registriert
-  const list = await shopifyRequest('GET', '/admin/api/2024-01/carrier_services.json', TOKEN);
-  const existing = (list.body?.carrier_services || []).find(
-    (s) => s.callback_url.includes('/api/carrier-service')
-  );
-
-  if (existing) {
-    ok(`Carrier Service bereits registriert (ID: ${existing.id})`);
-    ok(`Callback: ${existing.callback_url}`);
-    record('Carrier Service', 'skipped', `ID ${existing.id}`);
-  } else {
-    const callbackParams = new URLSearchParams({ shop: SHOP, token: process.env.CARRIER_SERVICE_SECRET });
-    const callbackUrl = `${PUBLIC}/api/carrier-service?${callbackParams}`;
-    const res = await shopifyRequest('POST', '/admin/api/2024-01/carrier_services.json', TOKEN, {
-      carrier_service: {
-        name: 'Mybridge Versandregeln',
-        callback_url: callbackUrl,
-        service_discovery: true,
-        format: 'json',
-      },
-    });
-
-    if (res.status === 201) {
-      ok(`Carrier Service registriert (ID: ${res.body.carrier_service.id})`);
-      ok(`Callback: ${callbackUrl.replace(process.env.CARRIER_SERVICE_SECRET, '***')}`);
-
-      // ID in DB speichern
-      try {
-        const db = require('../src/db/database');
-        db.prepare('UPDATE shops SET carrier_service_id = ? WHERE shop = ?')
-          .run(res.body.carrier_service.id, SHOP);
-      } catch { /* Shop noch nicht in DB — OK beim ersten Setup */ }
-
-      record('Carrier Service', 'ok', `ID ${res.body.carrier_service.id}`);
-    } else if (res.status === 422) {
-      warn('Carrier Service konnte nicht registriert werden.');
-      warn('Mögliche Ursache: Basic-Plan ohne "Third-party calculated shipping rates"');
-      warn('Lösung: Shopify Admin → Einstellungen → Versand → Trägertarife aktivieren');
-      record('Carrier Service', 'warn', 'Plan-Einschränkung');
-    } else {
-      fail(`Fehler ${res.status}: ${JSON.stringify(res.body)}`);
-      record('Carrier Service', 'fail', `HTTP ${res.status}`);
-    }
-  }
+  // Versandregeln werden nicht mehr über die CarrierService-API bereitgestellt
+  // (Plan-gebunden), sondern pro Shop aus der App-UI heraus in die nativen
+  // Shopify-Versandprofile synchronisiert — funktioniert auf jedem Plan.
+  info('Versandregeln: Sync in native Versandprofile erfolgt aus der App-UI („Synchronisieren").');
+  record('Versandprofil-Sync', 'skipped', 'per App-UI, kein Setup nötig');
 
   // ═════════════════════════════════════════════════════════════════════════════
   // STEP 6 — app/uninstalled Webhook registrieren
@@ -324,7 +284,7 @@ ${c.bold}Nützliche Befehle:${c.reset}
   npm run dev        Entwicklungsmodus (nodemon)
   npm test           Tests ausführen
   npm run build      Frontend neu bauen
-  npm run unregister Carrier Service entfernen
+  npm run build      Frontend neu bauen
 `);
 
 })().catch((err) => {

@@ -2,17 +2,16 @@ require('dotenv').config();
 const express = require('express');
 const path = require('path');
 const logger = require('./utils/logger');
-const { handleCarrierRequest } = require('./carrier');
 const authRouter = require('./routes/auth');
 const webhooksRouter = require('./routes/webhooks');
 const rulesRouter = require('./routes/api/rules');
-const carrierApiRouter = require('./routes/api/carrier');
+const syncRouter = require('./routes/api/sync');
 const legalRouter = require('./routes/legal');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Raw body capture for HMAC verification (carrier + webhooks)
+// Raw body capture for webhook HMAC verification
 app.use(express.json({
   verify: (req, _res, buf) => { req.rawBody = buf.toString(); },
 }));
@@ -26,11 +25,8 @@ app.use(webhooksRouter);
 // Rules CRUD API (session-protected)
 app.use('/api/rules', rulesRouter);
 
-// Carrier service status + on-demand registration (session-protected)
-app.use('/api/carrier', carrierApiRouter);
-
-// Carrier service callback (called by Shopify at checkout)
-app.post('/api/carrier-service', handleCarrierRequest);
+// Delivery profile sync (session-protected)
+app.use('/api/sync', syncRouter);
 
 // Legal pages (privacy policy, terms — required for App Store)
 app.use(legalRouter);
@@ -49,7 +45,6 @@ app.get('*', (_req, res) => {
 if (require.main === module) {
   app.listen(PORT, () => {
     logger.info(`Shopify-INT running on port ${PORT}`);
-    logger.info('Carrier: POST /api/carrier-service?shop=<shop-domain>');
   });
 }
 

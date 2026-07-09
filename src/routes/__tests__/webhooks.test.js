@@ -8,7 +8,6 @@ jest.mock('../../db/rules', () => ({
 jest.mock('../../db/shops', () => ({
   getShop: { get: jest.fn(() => null) },
   upsertShop: { run: jest.fn() },
-  setCarrierServiceId: { run: jest.fn() },
   markUninstalled: { run: jest.fn() },
 }));
 jest.mock('../../db/sessionStorage', () => ({

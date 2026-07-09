@@ -1,8 +1,8 @@
 const logger = require('../utils/logger');
 
 /**
- * Evaluates shipping rules against a carrier service request.
- * Returns an array of matching Shopify rate objects.
+ * Evaluates shipping rules against a cart (used by the rate preview).
+ * Returns an array of matching rate objects.
  *
  * Price note: Shopify expects total_price in the smallest currency unit (cents).
  * All prices in shipping-rules.json are already stored in cents (e.g. 495 = 4,95 EUR).

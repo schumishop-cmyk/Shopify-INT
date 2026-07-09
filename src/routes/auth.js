@@ -2,7 +2,6 @@ const { Router } = require('express');
 const shopify = require('../shopify/client');
 const { upsertShop } = require('../db/shops');
 const { seedDefaultRules } = require('../db/rules');
-const { registerCarrierService } = require('../shopify/carrierRegistration');
 const logger = require('../utils/logger');
 
 const router = Router();
@@ -32,12 +31,8 @@ router.get('/auth/callback', async (req, res) => {
 
     seedDefaultRules(session.shop);
 
-    // Best-effort: registration may fail if the shop's plan hasn't enabled
-    // carrier-calculated shipping yet. The merchant can retry from the app UI.
-    const result = await registerCarrierService(session.shop, session.accessToken);
-    if (!result.ok) {
-      logger.warn('Carrier registration deferred to manual retry', { shop: session.shop, error: result.error });
-    }
+    // No automatic profile sync here: writing into the merchant's shipping
+    // settings only happens when they explicitly click "Synchronisieren".
 
     logger.info('Shop installed', { shop: session.shop });
 

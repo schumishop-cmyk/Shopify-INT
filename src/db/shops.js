@@ -16,8 +16,4 @@ const markUninstalled = db.prepare(`
 
 const getShop = db.prepare(`SELECT * FROM shops WHERE shop = ?`);
 
-const setCarrierServiceId = db.prepare(`
-  UPDATE shops SET carrier_service_id = ? WHERE shop = ?
-`);
-
-module.exports = { upsertShop, markUninstalled, getShop, setCarrierServiceId };
+module.exports = { upsertShop, markUninstalled, getShop };

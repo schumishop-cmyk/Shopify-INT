@@ -32,7 +32,6 @@ jest.mock('../../db/rules', () => ({
 jest.mock('../../db/shops', () => ({
   getShop: { get: (shop) => shop === 'test.myshopify.com' ? { shop, access_token: 'tok', uninstalled_at: null } : null },
   upsertShop: { run: jest.fn() },
-  setCarrierServiceId: { run: jest.fn() },
   markUninstalled: { run: jest.fn() },
 }));
 

@@ -62,6 +62,24 @@ db.exec(`
   );
 
   CREATE INDEX IF NOT EXISTS idx_rules_shop ON shipping_rules(shop);
+
+  -- Shopify resources (zones, method definitions) created by our profile
+  -- sync — on re-sync we only ever delete resources tracked here, never
+  -- anything the merchant created themselves
+  CREATE TABLE IF NOT EXISTS synced_resources (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    shop       TEXT NOT NULL,
+    kind       TEXT NOT NULL, -- 'zone' | 'method_definition'
+    gid        TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_synced_shop ON synced_resources(shop);
 `);
+
+// Additive migration for pre-existing databases
+try {
+  db.exec(`ALTER TABLE shops ADD COLUMN last_synced_at TEXT`);
+} catch { /* column already exists */ }
 
 module.exports = db;
