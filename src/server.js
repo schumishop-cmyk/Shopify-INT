@@ -6,6 +6,7 @@ const authRouter = require('./routes/auth');
 const webhooksRouter = require('./routes/webhooks');
 const rulesRouter = require('./routes/api/rules');
 const syncRouter = require('./routes/api/sync');
+const combinedShippingRouter = require('./routes/api/combinedShipping');
 const legalRouter = require('./routes/legal');
 
 const app = express();
@@ -27,6 +28,9 @@ app.use('/api/rules', rulesRouter);
 
 // Delivery profile sync (session-protected)
 app.use('/api/sync', syncRouter);
+
+// Combined multi-origin shipping via discount function (session-protected)
+app.use('/api/combined-shipping', combinedShippingRouter);
 
 // Legal pages (privacy policy, terms — required for App Store)
 app.use(legalRouter);

@@ -77,9 +77,13 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_synced_shop ON synced_resources(shop);
 `);
 
-// Additive migration for pre-existing databases
-try {
-  db.exec(`ALTER TABLE shops ADD COLUMN last_synced_at TEXT`);
-} catch { /* column already exists */ }
+// Additive migrations for pre-existing databases
+for (const stmt of [
+  `ALTER TABLE shops ADD COLUMN last_synced_at TEXT`,
+  `ALTER TABLE shops ADD COLUMN combined_discount_gid TEXT`,
+  `ALTER TABLE shops ADD COLUMN combined_config TEXT`,
+]) {
+  try { db.exec(stmt); } catch { /* column already exists */ }
+}
 
 module.exports = db;

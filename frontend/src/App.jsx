@@ -3,12 +3,15 @@ import { Page, Layout, Toast, Frame } from '@shopify/polaris';
 import RuleList from './components/RuleList';
 import RuleFormModal from './components/RuleFormModal';
 import SyncCard from './components/SyncCard';
+import CombinedShippingCard from './components/CombinedShippingCard';
 import { useRules } from './hooks/useRules';
 import { useSync } from './hooks/useSync';
+import { useCombinedShipping } from './hooks/useCombinedShipping';
 
 export default function App() {
   const { rules, loading, error, createRule, updateRule, deleteRule, toggleRule } = useRules();
   const { lastSyncedAt, syncing, result, sync } = useSync();
+  const combined = useCombinedShipping();
   const [modalOpen, setModalOpen] = useState(false);
   const [editingRule, setEditingRule] = useState(null);
   const [toast, setToast] = useState(null);
@@ -76,6 +79,17 @@ export default function App() {
               onSync={async () => {
                 const res = await sync();
                 showToast(res.ok ? 'Versandtarife synchronisiert' : 'Synchronisierung fehlgeschlagen', !res.ok);
+              }}
+            />
+          </Layout.Section>
+          <Layout.Section>
+            <CombinedShippingCard
+              status={combined.status}
+              saving={combined.saving}
+              error={combined.error}
+              onSave={async (body) => {
+                const ok = await combined.save(body);
+                showToast(ok ? 'Kombinierte Versandkosten gespeichert' : 'Speichern fehlgeschlagen', !ok);
               }}
             />
           </Layout.Section>

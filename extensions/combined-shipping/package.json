@@ -1,0 +1,9 @@
+{
+  "name": "combined-shipping",
+  "private": true,
+  "type": "module",
+  "main": "src/run.js",
+  "scripts": {
+    "build": "shopify app function build"
+  }
+}

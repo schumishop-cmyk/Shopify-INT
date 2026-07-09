@@ -1,0 +1,18 @@
+query RunInput {
+  cart {
+    deliveryGroups {
+      id
+      deliveryOptions {
+        handle
+        cost {
+          amount
+        }
+      }
+    }
+  }
+  discountNode {
+    metafield(namespace: "$app:combined-shipping", key: "config") {
+      value
+    }
+  }
+}

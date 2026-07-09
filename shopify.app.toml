@@ -10,7 +10,9 @@ application_url = "https://shopify-int-production.up.railway.app"
 embedded = true
 
 [access_scopes]
-scopes = "write_shipping"
+# write_discounts: legt den automatischen Rabatt an, der die
+# Combined-Shipping-Function aktiviert
+scopes = "write_shipping,write_discounts"
 # Unser Server nutzt den klassischen OAuth-Flow (/auth/begin → /auth/callback),
 # nicht Shopify managed installation
 use_legacy_install_flow = true
