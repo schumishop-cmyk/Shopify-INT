@@ -229,7 +229,9 @@ function buildSyncPlan(rules, profile, trackedMethodDefIds = [], trackedZoneIds 
     if (uncovered.length > 0) {
       const zone = {
         name: `App: ${rule.name}`,
-        countries: uncovered.map((code) => ({ code })),
+        // includeAllProvinces is required for countries with sub-regions
+        // (Spain, Italy, …) — Shopify rejects the zone otherwise
+        countries: uncovered.map((code) => ({ code, includeAllProvinces: true })),
         methodDefinitionsToCreate: defs.map(cloneDef),
       };
       plannedZones.push(zone);

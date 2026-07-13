@@ -50,7 +50,10 @@ describe('buildSyncPlan', () => {
     const { input } = buildSyncPlan([r], baseProfile);
     const lg = input.locationGroupsToUpdate[0];
     expect(lg.zonesToCreate).toHaveLength(1);
-    expect(lg.zonesToCreate[0].countries).toEqual([{ code: 'FR' }, { code: 'IT' }]);
+    expect(lg.zonesToCreate[0].countries).toEqual([
+      { code: 'FR', includeAllProvinces: true },
+      { code: 'IT', includeAllProvinces: true },
+    ]);
     expect(lg.zonesToCreate[0].methodDefinitionsToCreate).toHaveLength(1);
   });
 
