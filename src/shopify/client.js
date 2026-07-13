@@ -13,7 +13,9 @@ if (!process.env.SHOPIFY_API_KEY || !process.env.SHOPIFY_API_SECRET) {
 const shopify = shopifyApi({
   apiKey: process.env.SHOPIFY_API_KEY || 'test-key',
   apiSecretKey: process.env.SHOPIFY_API_SECRET || 'test-secret',
-  scopes: ['write_shipping', 'read_shipping'],
+  // Muss mit den Scopes in shopify.app.toml übereinstimmen — im Legacy-
+  // Install-Flow bestimmt DIESE Liste, was der OAuth-Grant anfordert
+  scopes: ['write_shipping', 'write_discounts'],
   hostName: (process.env.PUBLIC_URL || 'localhost:3000').replace(/^https?:\/\//, ''),
   hostScheme: process.env.PUBLIC_URL?.startsWith('https') ? 'https' : 'http',
   apiVersion: ApiVersion.January24,
