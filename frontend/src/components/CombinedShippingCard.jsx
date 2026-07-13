@@ -56,7 +56,10 @@ export default function CombinedShippingCard({ status, saving, error, onSave }) 
             <p>
               Die Checkout-Function muss einmalig mit der Shopify CLI deployt werden:
               <br /><code>npm install -g @shopify/cli</code>
-              <br /><code>cd extensions/combined-shipping && npm install && cd ../..</code>
+              <br /><code>cd extensions/combined-shipping</code>
+              <br /><code>npm install</code>
+              <br /><code>shopify app function schema</code>
+              <br /><code>cd ../..</code>
               <br /><code>shopify app deploy</code>
             </p>
           </Banner>

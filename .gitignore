@@ -6,3 +6,9 @@ coverage/
 .DS_Store
 data/
 public/
+
+# Shopify function build artefacts (generated per environment/version)
+extensions/*/schema.graphql
+extensions/*/generated/
+extensions/*/dist/
+extensions/*/node_modules/
