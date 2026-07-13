@@ -22,8 +22,8 @@ redirect_urls = [
   "https://shopify-int-production.up.railway.app/auth/callback"
 ]
 
-# Hinweis: Bei use_legacy_install_flow = true dürfen KEINE
-# [[webhooks.subscriptions]] in dieser Datei stehen (sonst schlägt
+# Die Sektion selbst ist Pflicht — aber bei use_legacy_install_flow = true
+# dürfen KEINE [[webhooks.subscriptions]] darin stehen (sonst schlägt
 # `shopify app deploy` fehl). Stattdessen:
 #   - app/uninstalled wird pro Shop beim OAuth-Callback über die Admin-API
 #     registriert (src/routes/auth.js)
@@ -31,3 +31,5 @@ redirect_urls = [
 #     shop/redact) werden im Dev Dashboard unter „Compliance webhooks"
 #     eingetragen (URLs: /webhooks/customers/data_request, .../customers/redact,
 #     .../shop/redact). Nötig für die App-Store-Einreichung.
+[webhooks]
+api_version = "2026-01"
