@@ -2,6 +2,7 @@ const { Router } = require('express');
 const shopify = require('../shopify/client');
 const { upsertShop } = require('../db/shops');
 const { seedDefaultRules } = require('../db/rules');
+const { registerUninstallWebhook } = require('../shopify/webhookRegistration');
 const logger = require('../utils/logger');
 
 const router = Router();
@@ -30,6 +31,10 @@ router.get('/auth/callback', async (req, res) => {
     });
 
     seedDefaultRules(session.shop);
+
+    // Legacy install flow can't declare webhooks in the TOML — subscribe
+    // app/uninstalled here so we can clean up when the shop removes the app.
+    await registerUninstallWebhook(session.shop, session.accessToken);
 
     // No automatic profile sync here: writing into the merchant's shipping
     // settings only happens when they explicitly click "Synchronisieren".

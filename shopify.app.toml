@@ -22,24 +22,12 @@ redirect_urls = [
   "https://shopify-int-production.up.railway.app/auth/callback"
 ]
 
-[webhooks]
-api_version = "2024-01"
-
-  # Wird für alle installierenden Shops automatisch abonniert
-  [[webhooks.subscriptions]]
-  topics = ["app/uninstalled"]
-  uri = "https://shopify-int-production.up.railway.app/webhooks/app/uninstalled"
-
-  # GDPR-Pflicht-Webhooks — nur hier oder im Partner Dashboard konfigurierbar,
-  # nicht über die Admin API
-  [[webhooks.subscriptions]]
-  compliance_topics = ["customers/data_request"]
-  uri = "https://shopify-int-production.up.railway.app/webhooks/customers/data_request"
-
-  [[webhooks.subscriptions]]
-  compliance_topics = ["customers/redact"]
-  uri = "https://shopify-int-production.up.railway.app/webhooks/customers/redact"
-
-  [[webhooks.subscriptions]]
-  compliance_topics = ["shop/redact"]
-  uri = "https://shopify-int-production.up.railway.app/webhooks/shop/redact"
+# Hinweis: Bei use_legacy_install_flow = true dürfen KEINE
+# [[webhooks.subscriptions]] in dieser Datei stehen (sonst schlägt
+# `shopify app deploy` fehl). Stattdessen:
+#   - app/uninstalled wird pro Shop beim OAuth-Callback über die Admin-API
+#     registriert (src/routes/auth.js)
+#   - Die GDPR-Pflicht-Webhooks (customers/data_request, customers/redact,
+#     shop/redact) werden im Dev Dashboard unter „Compliance webhooks"
+#     eingetragen (URLs: /webhooks/customers/data_request, .../customers/redact,
+#     .../shop/redact). Nötig für die App-Store-Einreichung.
