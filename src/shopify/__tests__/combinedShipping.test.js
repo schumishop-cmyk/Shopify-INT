@@ -5,7 +5,7 @@ jest.mock('../adminGraphql', () => ({
 
 const mockState = { row: undefined };
 jest.mock('../../db/database', () => ({
-  prepare: (sql) => ({
+  prepare: () => ({
     run: jest.fn(),
     get: jest.fn(() => mockState.row),
     all: jest.fn(() => []),
@@ -39,17 +39,17 @@ describe('normalizeConfig', () => {
 });
 
 describe('applyCombinedShipping', () => {
-  test('reports needsDeploy when the function is not deployed', async () => {
+  test('reports needsDeploy when no discount function is deployed', async () => {
     mockGraphql.mockResolvedValueOnce({ data: { shopifyFunctions: { nodes: [] } } });
     const res = await applyCombinedShipping(SHOP, TOKEN, { enabled: true });
     expect(res.ok).toBe(false);
     expect(res.needsDeploy).toBe(true);
   });
 
-  test('creates the discount and writes the config metafield', async () => {
+  test('creates the discount via functionHandle with SHIPPING class', async () => {
     mockGraphql
-      // findFunctionId
-      .mockResolvedValueOnce({ data: { shopifyFunctions: { nodes: [{ id: 'fn-1', apiType: 'shipping_discounts' }] } } })
+      // isFunctionDeployed
+      .mockResolvedValueOnce({ data: { shopifyFunctions: { nodes: [{ id: 'fn-1', apiType: 'discount' }] } } })
       // discountAutomaticAppCreate
       .mockResolvedValueOnce({ data: { discountAutomaticAppCreate: { automaticAppDiscount: { discountId: 'gid://discount/1' }, userErrors: [] } } })
       // metafieldsSet
@@ -57,12 +57,24 @@ describe('applyCombinedShipping', () => {
 
     const res = await applyCombinedShipping(SHOP, TOKEN, { enabled: true, mode: 'highest_only' });
     expect(res.ok).toBe(true);
-    expect(res.config.mode).toBe('highest_only');
 
-    // metafield payload targets the created discount
-    const metafieldCall = mockGraphql.mock.calls[2];
-    expect(metafieldCall[3].metafields[0].ownerId).toBe('gid://discount/1');
-    expect(JSON.parse(metafieldCall[3].metafields[0].value)).toEqual({ enabled: true, mode: 'highest_only' });
+    const createInput = mockGraphql.mock.calls[1][3].discount;
+    expect(createInput.functionHandle).toBe('combined-shipping');
+    expect(createInput.discountClasses).toEqual(['SHIPPING']);
+
+    const metafieldCall = mockGraphql.mock.calls[2][3];
+    expect(metafieldCall.metafields[0].ownerId).toBe('gid://discount/1');
+    expect(JSON.parse(metafieldCall.metafields[0].value)).toEqual({ enabled: true, mode: 'highest_only' });
+  });
+
+  test('accepts legacy shipping_discounts apiType as deployed', async () => {
+    mockGraphql
+      .mockResolvedValueOnce({ data: { shopifyFunctions: { nodes: [{ id: 'fn-1', apiType: 'shipping_discounts' }] } } })
+      .mockResolvedValueOnce({ data: { discountAutomaticAppCreate: { automaticAppDiscount: { discountId: 'gid://discount/2' }, userErrors: [] } } })
+      .mockResolvedValueOnce({ data: { metafieldsSet: { metafields: [{ id: 'mf' }], userErrors: [] } } });
+
+    const res = await applyCombinedShipping(SHOP, TOKEN, { enabled: true });
+    expect(res.ok).toBe(true);
   });
 
   test('reuses an existing discount and only rewrites the metafield', async () => {
@@ -78,7 +90,7 @@ describe('applyCombinedShipping', () => {
 
   test('surfaces userErrors from discount creation', async () => {
     mockGraphql
-      .mockResolvedValueOnce({ data: { shopifyFunctions: { nodes: [{ id: 'fn-1', apiType: 'shipping_discounts' }] } } })
+      .mockResolvedValueOnce({ data: { shopifyFunctions: { nodes: [{ id: 'fn-1', apiType: 'discount' }] } } })
       .mockResolvedValueOnce({ data: { discountAutomaticAppCreate: { automaticAppDiscount: null, userErrors: [{ field: 'title', message: 'schon vergeben' }] } } });
 
     const res = await applyCombinedShipping(SHOP, TOKEN, { enabled: true });

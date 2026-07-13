@@ -1,4 +1,4 @@
-query RunInput {
+query DeliveryInput {
   cart {
     deliveryGroups {
       id
@@ -10,7 +10,8 @@ query RunInput {
       }
     }
   }
-  discountNode {
+  discount {
+    discountClasses
     metafield(namespace: "$app:combined-shipping", key: "config") {
       value
     }

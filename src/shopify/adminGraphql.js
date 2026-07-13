@@ -1,6 +1,6 @@
 const https = require('https');
 
-const API_VERSION = '2024-01';
+const API_VERSION = '2026-01';
 
 /**
  * Minimal GraphQL client for the Shopify Admin API.

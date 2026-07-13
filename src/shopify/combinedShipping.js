@@ -1,10 +1,11 @@
 /**
  * Manages the "combined shipping" automatic discount that drives the
- * shipping-discount Function (extensions/combined-shipping).
+ * discount function (extensions/combined-shipping).
  *
- * The Function itself is deployed via `shopify app deploy`; this module
- * activates it per shop by creating a DiscountAutomaticApp and storing the
- * merchant's configuration as a JSON metafield the Function reads at checkout.
+ * The function itself is deployed via `shopify app deploy`; this module
+ * activates it per shop by creating a DiscountAutomaticApp (linked via
+ * functionHandle) and storing the merchant's configuration as a JSON
+ * metafield the function reads at checkout.
  */
 const { adminGraphql } = require('./adminGraphql');
 const db = require('../db/database');
@@ -13,6 +14,7 @@ const logger = require('../utils/logger');
 const METAFIELD_NAMESPACE = '$app:combined-shipping';
 const METAFIELD_KEY = 'config';
 const DISCOUNT_TITLE = 'Kombinierter Versand (App)';
+const FUNCTION_HANDLE = 'combined-shipping';
 
 const FUNCTIONS_QUERY = `
   query {
@@ -63,13 +65,13 @@ function normalizeConfig(body) {
   return { config };
 }
 
-async function findFunctionId(shop, token) {
+/** Is a discount function from this app deployed? */
+async function isFunctionDeployed(shop, token) {
   const res = await adminGraphql(shop, token, FUNCTIONS_QUERY);
   if (res.errors) throw new Error(res.errors.map((e) => e.message).join('; '));
-  const fn = (res.data?.shopifyFunctions?.nodes || []).find(
-    (n) => n.apiType === 'shipping_discounts'
+  return (res.data?.shopifyFunctions?.nodes || []).some(
+    (n) => typeof n.apiType === 'string' && n.apiType.includes('discount')
   );
-  return fn?.id || null;
 }
 
 async function writeConfigMetafield(shop, token, discountGid, config) {
@@ -98,20 +100,20 @@ async function applyCombinedShipping(shop, token, body) {
   let discountGid = state?.combined_discount_gid;
 
   if (!discountGid) {
-    const functionId = await findFunctionId(shop, token);
-    if (!functionId) {
+    if (!(await isFunctionDeployed(shop, token))) {
       return {
         ok: false,
         needsDeploy: true,
-        error: 'Die Versand-Function ist noch nicht deployt. Bitte einmalig `shopify app deploy` im Projekt ausführen.',
+        error: 'Die Versand-Function ist noch nicht deployt. Bitte einmalig `shopify app deploy` im Projekt ausführen (siehe extensions/combined-shipping/README.md).',
       };
     }
 
     const res = await adminGraphql(shop, token, CREATE_MUTATION, {
       discount: {
         title: DISCOUNT_TITLE,
-        functionId,
+        functionHandle: FUNCTION_HANDLE,
         startsAt: new Date().toISOString(),
+        discountClasses: ['SHIPPING'],
         combinesWith: { orderDiscounts: true, productDiscounts: true, shippingDiscounts: false },
       },
     });
@@ -136,7 +138,7 @@ async function getCombinedShippingStatus(shop, token) {
   let deployed = true;
   if (!state?.combined_discount_gid) {
     try {
-      deployed = Boolean(await findFunctionId(shop, token));
+      deployed = await isFunctionDeployed(shop, token);
     } catch {
       deployed = false;
     }

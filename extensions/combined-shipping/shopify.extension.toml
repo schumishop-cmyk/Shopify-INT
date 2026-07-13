@@ -1,6 +1,6 @@
-# Shipping Discount Function — kombinierte Versandkosten bei Bestellungen
-# aus mehreren Standorten. Wird mit `shopify app deploy` gebaut & deployt.
-api_version = "2024-01"
+# Discount Function — kombinierte Versandkosten bei Bestellungen aus
+# mehreren Standorten. Deploy: siehe README.md in diesem Verzeichnis.
+api_version = "2026-01"
 
 [[extensions]]
 name = "Kombinierter Versand"
@@ -9,9 +9,11 @@ type = "function"
 description = "Kombiniert Versandkosten, wenn eine Bestellung aus mehreren Standorten verschickt wird"
 
   [[extensions.targeting]]
-  target = "purchase.shipping-discount.run"
-  input_query = "src/run.graphql"
-  export = "run"
+  target = "cart.delivery-options.discounts.generate.run"
+  input_query = "src/cart_delivery_options_discounts_generate_run.graphql"
+  export = "cart_delivery_options_discounts_generate_run"
 
   [extensions.build]
+  command = ""
   path = "dist/function.wasm"
+  watch = ["src/**/*.js", "src/**/*.cjs"]
