@@ -11,7 +11,9 @@ description = "Kombiniert Versandkosten, wenn eine Bestellung aus mehreren Stand
   [[extensions.targeting]]
   target = "cart.delivery-options.discounts.generate.run"
   input_query = "src/cart_delivery_options_discounts_generate_run.graphql"
-  export = "cart_delivery_options_discounts_generate_run"
+  # kebab-case (WebAssembly Component Model) — der camelCase-JS-Export
+  # cartDeliveryOptionsDiscountsGenerateRun wird automatisch darauf gemappt
+  export = "cart-delivery-options-discounts-generate-run"
 
   [extensions.build]
   command = ""
