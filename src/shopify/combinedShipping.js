@@ -55,6 +55,7 @@ function normalizeConfig(body) {
     enabled: body.enabled !== false,
     mode,
   };
+
   if (mode === 'flat_addition') {
     const cents = Math.round(parseFloat(body.flatAmount ?? 0) * 100);
     if (Number.isNaN(cents) || cents < 0) {
@@ -62,6 +63,27 @@ function normalizeConfig(body) {
     }
     config.flatAmountCents = cents;
   }
+
+  // Mixed orders are detected via the fulfillment partner's product vendor,
+  // and corrected by their (constant) shipping rate
+  const vendor = String(body.detectVendor ?? '').trim();
+  const rateCents = Math.round(parseFloat(body.fulfillmentRate ?? 0) * 100);
+
+  if (config.enabled) {
+    if (!vendor) {
+      return { error: 'Bitte den Vendor des Fulfillment-Partners angeben (z.B. "Spreadconnect")' };
+    }
+    if (Number.isNaN(rateCents) || rateCents <= 0) {
+      return { error: 'Bitte die Versandrate des Fulfillment-Partners angeben (z.B. 3.50)' };
+    }
+    if (mode === 'flat_addition' && config.flatAmountCents >= rateCents) {
+      return { error: 'Die Pauschale muss kleiner sein als die Versandrate des Partners — sonst gibt es nichts zu rabattieren' };
+    }
+  }
+
+  if (vendor) config.detectVendors = [vendor];
+  if (rateCents > 0) config.fulfillmentRateCents = rateCents;
+
   return { config };
 }
 

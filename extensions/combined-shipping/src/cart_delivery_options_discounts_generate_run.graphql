@@ -1,5 +1,16 @@
 query DeliveryInput {
   cart {
+    lines {
+      quantity
+      merchandise {
+        __typename
+        ... on ProductVariant {
+          product {
+            vendor
+          }
+        }
+      }
+    }
     deliveryGroups {
       id
       deliveryOptions {

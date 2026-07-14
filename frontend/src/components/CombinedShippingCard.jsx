@@ -14,6 +14,8 @@ export default function CombinedShippingCard({ status, saving, error, onSave }) 
   const [enabled, setEnabled] = useState(false);
   const [mode, setMode] = useState('highest_only');
   const [flatAmount, setFlatAmount] = useState('3.00');
+  const [detectVendor, setDetectVendor] = useState('Spreadconnect');
+  const [fulfillmentRate, setFulfillmentRate] = useState('3.50');
 
   useEffect(() => {
     if (status?.config) {
@@ -21,6 +23,12 @@ export default function CombinedShippingCard({ status, saving, error, onSave }) 
       setMode(status.config.mode || 'highest_only');
       if (status.config.flatAmountCents != null) {
         setFlatAmount((status.config.flatAmountCents / 100).toFixed(2));
+      }
+      if (status.config.detectVendors?.length) {
+        setDetectVendor(status.config.detectVendors[0]);
+      }
+      if (status.config.fulfillmentRateCents != null) {
+        setFulfillmentRate((status.config.fulfillmentRateCents / 100).toFixed(2));
       }
     }
   }, [status]);
@@ -37,7 +45,7 @@ export default function CombinedShippingCard({ status, saving, error, onSave }) 
           </InlineStack>
           <Button
             variant="primary"
-            onClick={() => onSave({ enabled, mode, flatAmount })}
+            onClick={() => onSave({ enabled, mode, flatAmount, detectVendor, fulfillmentRate })}
             loading={saving}
             disabled={needsDeploy}
           >
@@ -73,6 +81,25 @@ export default function CombinedShippingCard({ status, saving, error, onSave }) 
           label="Kombinierte Versandkosten aktivieren"
           checked={enabled}
           onChange={setEnabled}
+        />
+
+        <TextField
+          label="Vendor des Fulfillment-Partners"
+          value={detectVendor}
+          onChange={setDetectVendor}
+          autoComplete="off"
+          disabled={!enabled}
+          helpText="Daran erkennt die App gemischte Bestellungen: der Anbieter-/Vendor-Name der Fulfillment-Produkte (bei Spreadconnect/SPOD steht auf der Produktseite unter Anbieter: Spreadconnect)."
+        />
+
+        <TextField
+          label="Versandrate des Fulfillment-Partners (€)"
+          type="number"
+          value={fulfillmentRate}
+          onChange={setFulfillmentRate}
+          autoComplete="off"
+          disabled={!enabled}
+          helpText="Was der Partner pro Sendung berechnet (z.B. 3.50). Um diesen Betrag — abzüglich einer eventuellen Pauschale — werden gemischte Bestellungen rabattiert."
         />
 
         <Select
