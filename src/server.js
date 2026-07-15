@@ -17,6 +17,20 @@ app.use(express.json({
   verify: (req, _res, buf) => { req.rawBody = buf.toString(); },
 }));
 
+// Clickjacking protection (App Store review requirement for embedded apps):
+// only the requesting shop's admin may frame the app; everyone else is denied
+app.use((req, res, next) => {
+  const shop = String(req.query.shop || '');
+  const validShop = /^[a-zA-Z0-9][a-zA-Z0-9-]*\.myshopify\.com$/.test(shop);
+  res.setHeader(
+    'Content-Security-Policy',
+    validShop
+      ? `frame-ancestors https://${shop} https://admin.shopify.com;`
+      : "frame-ancestors 'none';"
+  );
+  next();
+});
+
 // Auth (OAuth flow)
 app.use(authRouter);
 
