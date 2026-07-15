@@ -82,6 +82,9 @@ for (const stmt of [
   `ALTER TABLE shops ADD COLUMN last_synced_at TEXT`,
   `ALTER TABLE shops ADD COLUMN combined_discount_gid TEXT`,
   `ALTER TABLE shops ADD COLUMN combined_config TEXT`,
+  // meta links a tracked resource to its origin, e.g. rule_id for
+  // tag-rule delivery profiles
+  `ALTER TABLE synced_resources ADD COLUMN meta TEXT`,
 ]) {
   try { db.exec(stmt); } catch { /* column already exists */ }
 }

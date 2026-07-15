@@ -90,11 +90,11 @@ describe('buildSyncPlan', () => {
     expect(warnings.some((w) => w.includes('Preisbedingung wird ignoriert'))).toBe(true);
   });
 
-  test('skips tag-based rules with a warning', () => {
+  test('skips tag-based rules silently (handled by tagProfileSync)', () => {
     const r = rule({ conditions: { requireProductTags: ['sperrgut'] } });
     const { input, skipped, warnings } = buildSyncPlan([r], baseProfile);
     expect(skipped).toEqual(['Testregel']);
-    expect(warnings.some((w) => w.includes('Produkt-Tags'))).toBe(true);
+    expect(warnings).toEqual([]);
     expect(input.locationGroupsToUpdate[0].zonesToUpdate).toBeUndefined();
   });
 

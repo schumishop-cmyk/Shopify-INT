@@ -29,7 +29,12 @@ const PROFILE_QUERY = `
           name
           default
           profileLocationGroups {
-            locationGroup { id }
+            locationGroup {
+              id
+              locations(first: 20) {
+                edges { node { id } }
+              }
+            }
             locationGroupZones(first: 50) {
               edges {
                 node {
@@ -96,6 +101,7 @@ function normalizeProfile(data) {
   return {
     profileId: node.id,
     locationGroupId: lg.locationGroup.id,
+    locationIds: (lg.locationGroup.locations?.edges || []).map((e) => e.node.id),
     zones,
     currencyCode: data.shop?.currencyCode || 'EUR',
     multipleLocationGroups: (node.profileLocationGroups || []).length > 1,
@@ -178,8 +184,9 @@ function buildSyncPlan(rules, profile, trackedMethodDefIds = [], trackedZoneIds 
 
     const c = rule.conditions || {};
     if ((c.requireProductTags && c.requireProductTags.length) || (c.excludeProductTags && c.excludeProductTags.length)) {
+      // Tag rules are handled separately via product-specific delivery
+      // profiles (syncTagProfiles) — not part of the default profile plan
       skipped.push(rule.name);
-      warnings.push(`Regel "${rule.name}" nutzt Produkt-Tags — Tag-Regeln folgen in einer späteren Version und wurden übersprungen.`);
       continue;
     }
 
@@ -277,8 +284,10 @@ function cloneDef(def) {
 }
 
 // ── DB statements ────────────────────────────────────────────────────────────
-const listTracked = db.prepare(`SELECT kind, gid FROM synced_resources WHERE shop = ?`);
-const clearTracked = db.prepare(`DELETE FROM synced_resources WHERE shop = ?`);
+const listTracked = db.prepare(`SELECT kind, gid FROM synced_resources WHERE shop = ? AND kind IN ('zone', 'method_definition')`);
+// Only clears default-profile resources — tag-rule profiles (kind='profile')
+// are managed by tagProfileSync and must survive this
+const clearTracked = db.prepare(`DELETE FROM synced_resources WHERE shop = ? AND kind IN ('zone', 'method_definition')`);
 const insertTracked = db.prepare(`INSERT INTO synced_resources (shop, kind, gid) VALUES (?, ?, ?)`);
 const touchSynced = db.prepare(`UPDATE shops SET last_synced_at = datetime('now') WHERE shop = ?`);
 
@@ -340,20 +349,33 @@ async function syncShopProfile(shop, token, rules) {
   });
   retrack();
 
+  // Tag rules (e.g. Sperrgut) live in product-specific delivery profiles
+  const { syncTagProfiles } = require('./tagProfileSync');
+  const tagResult = await syncTagProfiles(shop, token, rules, {
+    locationIds: profile.locationIds,
+    currencyCode: profile.currencyCode,
+  });
+
   logger.info('Profile sync complete', {
     shop,
     createdDefs: newDefIds.length,
     deletedDefs: input.methodDefinitionsToDelete?.length || 0,
-    warnings: warnings.length,
+    tagProfiles: tagResult,
+    warnings: warnings.length + tagResult.warnings.length,
   });
 
   return {
     ok: true,
     createdRates: newDefIds.length,
     deletedRates: input.methodDefinitionsToDelete?.length || 0,
-    warnings,
+    tagProfiles: {
+      created: tagResult.created,
+      updated: tagResult.updated,
+      removed: tagResult.removed,
+    },
+    warnings: [...warnings, ...tagResult.warnings],
     skipped,
   };
 }
 
-module.exports = { buildSyncPlan, normalizeProfile, syncShopProfile };
+module.exports = { buildSyncPlan, buildMethodDefinitions, normalizeProfile, syncShopProfile };

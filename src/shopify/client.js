@@ -14,8 +14,9 @@ const shopify = shopifyApi({
   apiKey: process.env.SHOPIFY_API_KEY || 'test-key',
   apiSecretKey: process.env.SHOPIFY_API_SECRET || 'test-secret',
   // Muss mit den Scopes in shopify.app.toml übereinstimmen — im Legacy-
-  // Install-Flow bestimmt DIESE Liste, was der OAuth-Grant anfordert
-  scopes: ['write_shipping', 'write_discounts'],
+  // Install-Flow bestimmt DIESE Liste, was der OAuth-Grant anfordert.
+  // read_products: Tag-Regeln suchen Produkte per Tag für die Profil-Zuordnung
+  scopes: ['write_shipping', 'write_discounts', 'read_products'],
   hostName: (process.env.PUBLIC_URL || 'localhost:3000').replace(/^https?:\/\//, ''),
   hostScheme: process.env.PUBLIC_URL?.startsWith('https') ? 'https' : 'http',
   apiVersion: ApiVersion.January24,

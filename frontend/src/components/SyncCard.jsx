@@ -45,11 +45,19 @@ export default function SyncCard({ lastSyncedAt, syncing, result, onSync }) {
 
         {result?.ok && (
           <Banner tone="success" title={`${result.createdRates} Versandtarife angelegt`}>
-            {result.warnings?.length > 0 && (
-              <List type="bullet">
-                {result.warnings.map((w, i) => <List.Item key={i}>{w}</List.Item>)}
-              </List>
-            )}
+            <BlockStack gap="150">
+              {result.tagProfiles && (result.tagProfiles.created + result.tagProfiles.updated + result.tagProfiles.removed) > 0 && (
+                <Text as="p">
+                  Tag-Regeln: {result.tagProfiles.created} Versandprofil(e) angelegt,{' '}
+                  {result.tagProfiles.updated} aktualisiert, {result.tagProfiles.removed} entfernt.
+                </Text>
+              )}
+              {result.warnings?.length > 0 && (
+                <List type="bullet">
+                  {result.warnings.map((w, i) => <List.Item key={i}>{w}</List.Item>)}
+                </List>
+              )}
+            </BlockStack>
           </Banner>
         )}
       </BlockStack>
