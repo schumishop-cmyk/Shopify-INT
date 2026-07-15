@@ -82,8 +82,9 @@ class RuleEngine {
     }
 
     if (conditions.requireProductTags && conditions.requireProductTags.length > 0) {
-      const allPresent = conditions.requireProductTags.every((tag) => hasProductTag(tag));
-      if (!allPresent) return false;
+      // One matching tag is enough — multiple tags act as synonyms
+      const anyPresent = conditions.requireProductTags.some((tag) => hasProductTag(tag));
+      if (!anyPresent) return false;
     }
 
     if (conditions.excludeProductTags && conditions.excludeProductTags.length > 0) {

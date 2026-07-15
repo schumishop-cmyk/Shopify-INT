@@ -182,7 +182,8 @@ export default function RuleFormModal({ rule, onSave, onClose }) {
           </InlineGrid>
 
           <TextField label="Produkt-Tags (kommagetrennt)" value={form.requireTags}
-            onChange={(v) => set('requireTags', v)} placeholder="z.B. sperrgut, bulky" autoComplete="off" />
+            onChange={(v) => set('requireTags', v)} placeholder="z.B. sperrgut, bulky" autoComplete="off"
+            helpText="Ein Tag genügt: Produkte mit mindestens einem dieser Tags erhalten die Regel." />
         </BlockStack>
       </Modal.Section>
 

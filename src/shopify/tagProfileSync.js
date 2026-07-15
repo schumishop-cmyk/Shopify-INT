@@ -108,10 +108,11 @@ function isTagRule(rule) {
   return rule.enabled && rule.conditions?.requireProductTags?.length > 0;
 }
 
+// One matching tag is enough (OR) — multiple tags act as synonyms
 function tagQuery(tags) {
   return tags
     .map((t) => `tag:'${String(t).replace(/'/g, "\\'")}'`)
-    .join(' AND ');
+    .join(' OR ');
 }
 
 async function findVariantIdsByTags(shop, token, tags, warnings, ruleName) {
@@ -250,7 +251,7 @@ async function syncTagProfiles(shop, token, rules, { locationIds, currencyCode }
       tracked.delete(rule.rule_id); // whatever remains afterwards is stale
 
       if (variantIds.length === 0) {
-        warnings.push(`Regel "${rule.name}": kein Produkt trägt die Tags ${rule.conditions.requireProductTags.join(', ')} — Profil wird nicht angelegt.`);
+        warnings.push(`Regel "${rule.name}": kein Produkt trägt eines der Tags ${rule.conditions.requireProductTags.join(', ')} — Profil wird nicht angelegt.`);
         if (existingGid) {
           await removeTagProfile(shop, token, existingGid);
           untrackProfile.run(shop, existingGid);

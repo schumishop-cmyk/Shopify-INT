@@ -51,8 +51,8 @@ beforeEach(() => {
 });
 
 describe('tagQuery', () => {
-  test('joins multiple tags with AND', () => {
-    expect(tagQuery(['sperrgut', 'bulky'])).toBe("tag:'sperrgut' AND tag:'bulky'");
+  test('joins multiple tags with OR — one matching tag is enough', () => {
+    expect(tagQuery(['sperrgut', 'bulky'])).toBe("tag:'sperrgut' OR tag:'bulky'");
   });
 
   test('escapes single quotes', () => {
