@@ -35,3 +35,11 @@ redirect_urls = [
 #     .../shop/redact). Nötig für die App-Store-Einreichung.
 [webhooks]
 api_version = "2026-01"
+
+  # GDPR-Pflicht-Webhooks — im neuen Dev Dashboard Teil der versionierten
+  # Konfiguration (kein Einstellungs-Formular); wird per `shopify app deploy`
+  # gesetzt. Verträgt sich mit use_legacy_install_flow.
+  [webhooks.privacy_compliance]
+  customer_data_request_url = "https://shopify-int-production.up.railway.app/webhooks/customers/data_request"
+  customer_deletion_url = "https://shopify-int-production.up.railway.app/webhooks/customers/redact"
+  shop_deletion_url = "https://shopify-int-production.up.railway.app/webhooks/shop/redact"

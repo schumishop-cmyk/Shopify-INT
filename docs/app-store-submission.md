@@ -16,12 +16,14 @@ Stand: Juli 2026 · App: **Shipping Rules App** (`client_id e8c2278c90acbdc6a401
 
 ## 2. Im Dev Dashboard erledigen (einmalig, manuell)
 
-1. **Compliance-Webhooks** (App → Einstellungen → Compliance webhooks):
-   - Customer data request: `https://shopify-int-production.up.railway.app/webhooks/customers/data_request`
-   - Customer redact: `https://shopify-int-production.up.railway.app/webhooks/customers/redact`
-   - Shop redact: `https://shopify-int-production.up.railway.app/webhooks/shop/redact`
+1. **Compliance-Webhooks:** stehen in `shopify.app.toml` unter
+   `[webhooks.privacy_compliance]` und werden mit `shopify app deploy`
+   als App-Version gesetzt (im neuen Dev Dashboard gibt es dafür kein
+   Einstellungs-Formular — Kontrolle: Versionen → aktive Version, dort
+   müssen die drei URLs erscheinen).
 2. **App-URL / Redirect-URL** prüfen (sollten bereits stimmen)
-3. **Distribution** auf „Shopify App Store" stellen → Listing anlegen
+3. **App-Symbol** hochladen (Einstellungen → App-Symbol, 1200×1200 PNG/JPG)
+4. **Distribution** auf „Shopify App Store" stellen → Listing anlegen
 
 ## 3. Listing-Inhalte (Vorlagen zum Anpassen)
 
