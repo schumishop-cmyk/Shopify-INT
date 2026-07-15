@@ -13,7 +13,8 @@ embedded = true
 # write_discounts: legt den automatischen Rabatt an, der die
 # Combined-Shipping-Function aktiviert
 # read_products: Tag-Regeln (Sperrgut) suchen Produkte per Tag
-scopes = "write_shipping,write_discounts,read_products"
+# read_locations: Standort-IDs für app-eigene Versandprofile (Tag-Regeln)
+scopes = "write_shipping,write_discounts,read_products,read_locations"
 # Unser Server nutzt den klassischen OAuth-Flow (/auth/begin → /auth/callback),
 # nicht Shopify managed installation
 use_legacy_install_flow = true
