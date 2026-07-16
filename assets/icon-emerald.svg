@@ -1,0 +1,35 @@
+<svg width="1200" height="1200" viewBox="0 0 1200 1200" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0d8a68"/>
+      <stop offset="1" stop-color="#085c46"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Hintergrund -->
+  <rect x="0" y="0" width="1200" height="1200" rx="210" fill="url(#bg)"/>
+
+  <!-- Zwei Herkunfts-Pins -->
+  <circle cx="300" cy="255" r="48" fill="#ffffff"/>
+  <circle cx="300" cy="255" r="20" fill="#0a6b52"/>
+  <circle cx="900" cy="255" r="48" fill="#ffffff"/>
+  <circle cx="900" cy="255" r="20" fill="#0a6b52"/>
+
+  <!-- Routen, die sich zum Paket vereinen (gepunktet) -->
+  <path d="M 300 330 C 300 470, 470 500, 557 583"
+        fill="none" stroke="#ffffff" stroke-width="27"
+        stroke-linecap="round" stroke-dasharray="0.1 66"/>
+  <path d="M 900 330 C 900 470, 730 500, 643 583"
+        fill="none" stroke="#ffffff" stroke-width="27"
+        stroke-linecap="round" stroke-dasharray="0.1 66"/>
+
+  <!-- Paket (Würfel) -->
+  <!-- Deckel -->
+  <polygon points="600,608 806,716 600,824 394,716" fill="#ffffff"/>
+  <!-- Linke Seite -->
+  <polygon points="394,716 600,824 600,1056 394,948" fill="#ffffff" fill-opacity="0.78"/>
+  <!-- Rechte Seite -->
+  <polygon points="806,716 600,824 600,1056 806,948" fill="#ffffff" fill-opacity="0.55"/>
+  <!-- Klebeband auf dem Deckel -->
+  <polygon points="600,630 640,651 474,738 434,717" fill="#0a6b52" fill-opacity="0.28"/>
+</svg>
