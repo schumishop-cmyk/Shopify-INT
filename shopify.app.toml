@@ -3,10 +3,14 @@
 #
 # Änderungen an dieser Datei werden mit `shopify app deploy` als neue
 # App-Version ins Partner Dashboard gepusht (dort erschien z.B. mybridge-2).
+#
+# WICHTIG: client_id gehört zur App "MyBridge" im echten Partner-Konto
+# (Distribution/App-Store-Einreichung erfordert eine Partner-Organisation —
+# "Shipping Rules App" hing an einer Merchant-Org ohne Partner-Zugang).
 
 name = "Shipping Rules App"
-client_id = "e8c2278c90acbdc6a401a9ec2c86c368"
-application_url = "https://shopify-int-production.up.railway.app"
+client_id = "9193536353d7d304a0c2414989304fb1"
+application_url = "https://shipping-rules-app-production.up.railway.app"
 embedded = true
 
 [access_scopes]
@@ -21,7 +25,7 @@ use_legacy_install_flow = true
 
 [auth]
 redirect_urls = [
-  "https://shopify-int-production.up.railway.app/auth/callback"
+  "https://shipping-rules-app-production.up.railway.app/auth/callback"
 ]
 
 # Die Sektion selbst ist Pflicht — aber bei use_legacy_install_flow = true
@@ -40,6 +44,6 @@ api_version = "2026-01"
   # Konfiguration (kein Einstellungs-Formular); wird per `shopify app deploy`
   # gesetzt. Verträgt sich mit use_legacy_install_flow.
   [webhooks.privacy_compliance]
-  customer_data_request_url = "https://shopify-int-production.up.railway.app/webhooks/customers/data_request"
-  customer_deletion_url = "https://shopify-int-production.up.railway.app/webhooks/customers/redact"
-  shop_deletion_url = "https://shopify-int-production.up.railway.app/webhooks/shop/redact"
+  customer_data_request_url = "https://shipping-rules-app-production.up.railway.app/webhooks/customers/data_request"
+  customer_deletion_url = "https://shipping-rules-app-production.up.railway.app/webhooks/customers/redact"
+  shop_deletion_url = "https://shipping-rules-app-production.up.railway.app/webhooks/shop/redact"

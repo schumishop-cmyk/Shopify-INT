@@ -1,6 +1,13 @@
 # App-Store-Einreichung — Checkliste & Vorlagen
 
-Stand: Juli 2026 · App: **Shipping Rules App** (`client_id e8c2278c90acbdc6a401a9ec2c86c368`)
+Stand: Juli 2026 · App: **MyBridge** (`client_id 9193536353d7d304a0c2414989304fb1`) im Partner-Konto
+
+> **Hinweis:** Die App wurde ursprünglich als "Shipping Rules App" unter
+> einer Merchant-Organisation entwickelt. Merchant-Organisationen haben
+> keinen Zugang zum Partner Dashboard (kein `App distribution`-Menü) —
+> App-Store-Einreichung erfordert eine echte Partner-Organisation. Deshalb
+> läuft die Distribution jetzt über die App **MyBridge** im Partner-Konto;
+> `shopify.app.toml` zeigt entsprechend auf deren `client_id`.
 
 ## 1. Technische Voraussetzungen (Status)
 
