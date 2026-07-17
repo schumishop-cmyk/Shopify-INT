@@ -10,7 +10,7 @@
 
 name = "Shipping Rules App"
 client_id = "9193536353d7d304a0c2414989304fb1"
-application_url = "https://shipping-rules-app-production.up.railway.app"
+application_url = "https://ext-shipping-rules-production.up.railway.app"
 embedded = true
 
 [access_scopes]
@@ -25,7 +25,7 @@ use_legacy_install_flow = true
 
 [auth]
 redirect_urls = [
-  "https://shipping-rules-app-production.up.railway.app/auth/callback"
+  "https://ext-shipping-rules-production.up.railway.app/auth/callback"
 ]
 
 # Die Sektion selbst ist Pflicht — aber bei use_legacy_install_flow = true
@@ -44,6 +44,6 @@ api_version = "2026-01"
   # Konfiguration (kein Einstellungs-Formular); wird per `shopify app deploy`
   # gesetzt. Verträgt sich mit use_legacy_install_flow.
   [webhooks.privacy_compliance]
-  customer_data_request_url = "https://shipping-rules-app-production.up.railway.app/webhooks/customers/data_request"
-  customer_deletion_url = "https://shipping-rules-app-production.up.railway.app/webhooks/customers/redact"
-  shop_deletion_url = "https://shipping-rules-app-production.up.railway.app/webhooks/shop/redact"
+  customer_data_request_url = "https://ext-shipping-rules-production.up.railway.app/webhooks/customers/data_request"
+  customer_deletion_url = "https://ext-shipping-rules-production.up.railway.app/webhooks/customers/redact"
+  shop_deletion_url = "https://ext-shipping-rules-production.up.railway.app/webhooks/shop/redact"
