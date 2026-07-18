@@ -10,6 +10,16 @@ if (!process.env.SHOPIFY_API_KEY || !process.env.SHOPIFY_API_SECRET) {
   }
 }
 
+// Derive host + scheme robustly from PUBLIC_URL. Only localhost is served
+// over http; every real deployment (Railway etc.) is https — so if the
+// scheme is missing or wrong in PUBLIC_URL, default to https for non-local
+// hosts. This prevents an http:// redirect_uri that Shopify would reject as
+// "unauthorized" (whitelisted callback is always https).
+const rawPublicUrl = process.env.PUBLIC_URL || 'localhost:3000';
+const hostName = rawPublicUrl.replace(/^https?:\/\//, '').replace(/\/+$/, '');
+const isLocal = /^localhost(:\d+)?$/.test(hostName) || hostName.startsWith('127.0.0.1');
+const hostScheme = rawPublicUrl.startsWith('http://') || isLocal ? 'http' : 'https';
+
 const shopify = shopifyApi({
   apiKey: process.env.SHOPIFY_API_KEY || 'test-key',
   apiSecretKey: process.env.SHOPIFY_API_SECRET || 'test-secret',
@@ -18,8 +28,8 @@ const shopify = shopifyApi({
   // read_products:  Tag-Regeln suchen Produkte per Tag für die Profil-Zuordnung
   // read_locations: Standort-IDs für app-eigene Versandprofile (Tag-Regeln)
   scopes: ['write_shipping', 'write_discounts', 'read_products', 'read_locations'],
-  hostName: (process.env.PUBLIC_URL || 'localhost:3000').replace(/^https?:\/\//, ''),
-  hostScheme: process.env.PUBLIC_URL?.startsWith('https') ? 'https' : 'http',
+  hostName,
+  hostScheme,
   apiVersion: ApiVersion.January24,
   isEmbeddedApp: true,
   sessionStorage,
