@@ -85,6 +85,11 @@ for (const stmt of [
   // meta links a tracked resource to its origin, e.g. rule_id for
   // tag-rule delivery profiles
   `ALTER TABLE synced_resources ADD COLUMN meta TEXT`,
+  // Expiring offline access tokens (Shopify Dec 2025): store the refresh
+  // token and expiries alongside the access token
+  `ALTER TABLE shops ADD COLUMN refresh_token TEXT`,
+  `ALTER TABLE shops ADD COLUMN token_expires_at TEXT`,
+  `ALTER TABLE shops ADD COLUMN refresh_token_expires_at TEXT`,
 ]) {
   try { db.exec(stmt); } catch { /* column already exists */ }
 }

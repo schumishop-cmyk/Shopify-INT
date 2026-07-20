@@ -1,5 +1,6 @@
 const { verifySessionToken } = require('../utils/sessionToken');
 const { getShop } = require('../db/shops');
+const { getValidToken } = require('../shopify/tokens');
 const logger = require('../utils/logger');
 
 /**
@@ -9,8 +10,11 @@ const logger = require('../utils/logger');
  * as `Authorization: Bearer <token>`. We verify the HS256 signature against
  * our API secret — the shop identity comes from the verified `dest` claim,
  * never from a client-controlled header.
+ *
+ * req.shopToken is a currently-valid Admin API access token: expiring offline
+ * tokens are refreshed transparently before the request proceeds.
  */
-function requireSessionToken(req, res, next) {
+async function requireSessionToken(req, res, next) {
   const match = /^Bearer (.+)$/.exec(req.headers.authorization || '');
   if (!match) {
     return res.status(401).json({ error: 'Missing session token' });
@@ -32,8 +36,18 @@ function requireSessionToken(req, res, next) {
     return res.status(401).json({ error: 'App not installed for this shop' });
   }
 
+  try {
+    req.shopToken = await getValidToken(shop);
+  } catch (err) {
+    logger.warn('Access token unavailable', { shop, error: err.message });
+    return res.status(401).json({
+      error: err.needsReauth
+        ? 'Sitzung abgelaufen — bitte die App einmal neu öffnen bzw. autorisieren.'
+        : 'Zugriffstoken konnte nicht erneuert werden: ' + err.message,
+    });
+  }
+
   req.shop = shop;
-  req.shopToken = row.access_token;
   next();
 }
 
