@@ -8,6 +8,8 @@ const rulesRouter = require('./routes/api/rules');
 const syncRouter = require('./routes/api/sync');
 const combinedShippingRouter = require('./routes/api/combinedShipping');
 const legalRouter = require('./routes/legal');
+const { getShop } = require('./db/shops');
+const { isValidShop, publicBaseUrl } = require('./shopify/oauth');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -52,6 +54,31 @@ app.use(legalRouter);
 // Health check
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+// Root gate: an unauthenticated shop hitting "/" must be sent straight into
+// OAuth (App Store requirement: authenticate immediately after install, before
+// any UI). Installed shops fall through to the embedded frontend below.
+app.get('/', (req, res, next) => {
+  const shop = String(req.query.shop || '').toLowerCase();
+  if (!shop || !isValidShop(shop)) return next();
+
+  const row = getShop.get(shop);
+  if (row && !row.uninstalled_at) return next(); // installed → serve app
+
+  const authPath = `/auth/begin?shop=${encodeURIComponent(shop)}`;
+  const embedded = req.query.embedded === '1' || Boolean(req.query.host);
+  if (embedded) {
+    // Inside the Admin iframe we cannot 302 to Shopify's consent screen
+    // (X-Frame-Options blocks it), so break out of the frame via top-level nav.
+    const absolute = publicBaseUrl() + authPath;
+    return res
+      .type('html')
+      .send(`<!doctype html><html><head><meta charset="utf-8"></head><body><script>
+(function(){var u=${JSON.stringify(absolute)};if(window.top===window.self){window.location.href=u;}else{window.top.location.href=u;}})();
+</script></body></html>`);
+  }
+  return res.redirect(authPath);
 });
 
 // Serve the built React frontend
