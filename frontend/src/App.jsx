@@ -4,14 +4,17 @@ import RuleList from './components/RuleList';
 import RuleFormModal from './components/RuleFormModal';
 import SyncCard from './components/SyncCard';
 import CombinedShippingCard from './components/CombinedShippingCard';
+import BillingBanner from './components/BillingBanner';
 import { useRules } from './hooks/useRules';
 import { useSync } from './hooks/useSync';
 import { useCombinedShipping } from './hooks/useCombinedShipping';
+import { useBilling } from './hooks/useBilling';
 
 export default function App() {
   const { rules, loading, error, createRule, updateRule, deleteRule, toggleRule } = useRules();
   const { lastSyncedAt, syncing, result, sync } = useSync();
   const combined = useCombinedShipping();
+  const billing = useBilling();
   const [modalOpen, setModalOpen] = useState(false);
   const [editingRule, setEditingRule] = useState(null);
   const [toast, setToast] = useState(null);
@@ -71,6 +74,14 @@ export default function App() {
         primaryAction={{ content: 'Neue Regel', onAction: handleCreate }}
       >
         <Layout>
+          <Layout.Section>
+            <BillingBanner
+              loading={billing.loading}
+              active={billing.active}
+              plan={billing.plan}
+              pricingUrl={billing.pricingUrl}
+            />
+          </Layout.Section>
           <Layout.Section>
             <SyncCard
               lastSyncedAt={lastSyncedAt}

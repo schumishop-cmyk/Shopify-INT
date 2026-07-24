@@ -7,6 +7,7 @@ const webhooksRouter = require('./routes/webhooks');
 const rulesRouter = require('./routes/api/rules');
 const syncRouter = require('./routes/api/sync');
 const combinedShippingRouter = require('./routes/api/combinedShipping');
+const billingRouter = require('./routes/api/billing');
 const legalRouter = require('./routes/legal');
 const { getShop } = require('./db/shops');
 const { isValidShop, publicBaseUrl } = require('./shopify/oauth');
@@ -47,6 +48,9 @@ app.use('/api/sync', syncRouter);
 
 // Combined multi-origin shipping via discount function (session-protected)
 app.use('/api/combined-shipping', combinedShippingRouter);
+
+// Managed Pricing: subscription status + hosted plan-selection URL
+app.use('/api/billing', billingRouter);
 
 // Legal pages (privacy policy, terms — required for App Store)
 app.use(legalRouter);

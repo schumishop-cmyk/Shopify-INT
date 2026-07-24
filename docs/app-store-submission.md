@@ -105,8 +105,15 @@ Stand: Juli 2026 · App: **MyBridge** (`client_id 9193536353d7d304a0c2414989304f
   Standort-IDs des Shops als Versandursprünge.
 - **Warum `write_discounts`?** Der kombinierte Versand läuft über einen
   automatischen App-Rabatt (Shipping-Discount-Function).
-- **Billing:** App ist (zunächst) kostenlos — keine Billing-API nötig.
-  Bei späterer Monetarisierung: Managed Pricing oder Billing API nachrüsten.
+- **Billing:** App nutzt **Shopify Managed Pricing** (Pflicht laut Review
+  1.2.1 — Off-Platform-Billing ist verboten). Pläne werden im Partner
+  Dashboard definiert; Shopify hostet die Bezahlseite. Die App liest den
+  Abo-Status (`currentAppInstallation.activeSubscriptions`) und zeigt im
+  Adminbereich einen „Plan wählen"-Button, der zur Shopify-Pricing-Seite
+  führt (`/api/billing` → `BillingBanner`).
+  - **Env-Variable `SHOPIFY_APP_HANDLE`** muss in Railway gesetzt sein (App
+    Handle aus dem Partner Dashboard), sonst kann die App die Pricing-URL
+    nicht bauen und zeigt stattdessen den Hinweis-Fallback.
 
 ## 7. Nach der Einreichung
 
