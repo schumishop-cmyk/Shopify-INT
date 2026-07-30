@@ -23,8 +23,15 @@ const updateTokens = db.prepare(`
   WHERE shop = @shop
 `);
 
+// On uninstall Shopify deletes the app's data on its side (including our
+// automatic app discount), so clear the stored discount reference too —
+// otherwise a later reinstall writes to a discount GID that no longer exists.
 const markUninstalled = db.prepare(`
-  UPDATE shops SET uninstalled_at = datetime('now') WHERE shop = ?
+  UPDATE shops
+     SET uninstalled_at = datetime('now'),
+         combined_discount_gid = NULL,
+         combined_config = NULL
+   WHERE shop = ?
 `);
 
 const getShop = db.prepare(`SELECT * FROM shops WHERE shop = ?`);

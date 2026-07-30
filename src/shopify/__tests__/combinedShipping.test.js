@@ -109,6 +109,25 @@ describe('applyCombinedShipping', () => {
     expect(mockGraphql.mock.calls[0][3].metafields[0].ownerId).toBe('gid://discount/keep');
   });
 
+  test('recreates a stale discount when the metafield owner no longer exists', async () => {
+    mockState.row = { combined_discount_gid: 'gid://discount/stale', combined_config: '{}' };
+    mockGraphql
+      // 1) write to the stale discount → Shopify: owner does not exist
+      .mockResolvedValueOnce({ data: { metafieldsSet: { metafields: [], userErrors: [{ field: ['ownerId'], message: 'Owner does not exist' }] } } })
+      // 2) function is deployed
+      .mockResolvedValueOnce({ data: { shopifyFunctions: { nodes: [{ id: 'fn-1', apiType: 'discount' }] } } })
+      // 3) recreate the discount
+      .mockResolvedValueOnce({ data: { discountAutomaticAppCreate: { automaticAppDiscount: { discountId: 'gid://discount/new' }, userErrors: [] } } })
+      // 4) write the metafield to the new discount
+      .mockResolvedValueOnce({ data: { metafieldsSet: { metafields: [{ id: 'mf' }], userErrors: [] } } });
+
+    const res = await applyCombinedShipping(SHOP, TOKEN, BODY);
+    expect(res.ok).toBe(true);
+    expect(mockGraphql).toHaveBeenCalledTimes(4);
+    // final metafield write targets the freshly created discount
+    expect(mockGraphql.mock.calls[3][3].metafields[0].ownerId).toBe('gid://discount/new');
+  });
+
   test('surfaces userErrors from discount creation', async () => {
     mockGraphql
       .mockResolvedValueOnce({ data: { shopifyFunctions: { nodes: [{ id: 'fn-1', apiType: 'discount' }] } } })

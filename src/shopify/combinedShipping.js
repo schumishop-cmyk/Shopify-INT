@@ -110,6 +110,30 @@ async function writeConfigMetafield(shop, token, discountGid, config) {
   if (errors.length) throw new Error(errors.map((e) => e.message).join('; '));
 }
 
+const NEEDS_DEPLOY_ERROR = 'Die Versand-Function ist noch nicht deployt. Bitte einmalig `shopify app deploy` im Projekt ausführen (siehe extensions/combined-shipping/README.md).';
+
+/** Creates the automatic app discount and returns its GID (throws on userErrors). */
+async function createDiscount(shop, token) {
+  const res = await adminGraphql(shop, token, CREATE_MUTATION, {
+    discount: {
+      title: DISCOUNT_TITLE,
+      functionHandle: FUNCTION_HANDLE,
+      startsAt: new Date().toISOString(),
+      discountClasses: ['SHIPPING'],
+      combinesWith: { orderDiscounts: true, productDiscounts: true, shippingDiscounts: false },
+    },
+  });
+  const errors = res.errors || res.data?.discountAutomaticAppCreate?.userErrors || [];
+  if (errors.length) {
+    const err = new Error(errors.map((e) => e.message).join('; '));
+    err.userErrors = errors;
+    throw err;
+  }
+  const gid = res.data.discountAutomaticAppCreate.automaticAppDiscount.discountId;
+  logger.info('Combined-shipping discount created', { shop, discountGid: gid });
+  return gid;
+}
+
 /**
  * Activates (or reconfigures) combined shipping for a shop.
  * Returns { ok, active, config } or { ok: false, error, needsDeploy? }.
@@ -120,36 +144,42 @@ async function applyCombinedShipping(shop, token, body) {
 
   const state = readState.get(shop);
   let discountGid = state?.combined_discount_gid;
+  let freshlyCreated = false;
 
-  if (!discountGid) {
-    if (!(await isFunctionDeployed(shop, token))) {
-      return {
-        ok: false,
-        needsDeploy: true,
-        error: 'Die Versand-Function ist noch nicht deployt. Bitte einmalig `shopify app deploy` im Projekt ausführen (siehe extensions/combined-shipping/README.md).',
-      };
+  try {
+    if (!discountGid) {
+      if (!(await isFunctionDeployed(shop, token))) {
+        return { ok: false, needsDeploy: true, error: NEEDS_DEPLOY_ERROR };
+      }
+      discountGid = await createDiscount(shop, token);
+      freshlyCreated = true;
     }
 
-    const res = await adminGraphql(shop, token, CREATE_MUTATION, {
-      discount: {
-        title: DISCOUNT_TITLE,
-        functionHandle: FUNCTION_HANDLE,
-        startsAt: new Date().toISOString(),
-        discountClasses: ['SHIPPING'],
-        combinesWith: { orderDiscounts: true, productDiscounts: true, shippingDiscounts: false },
-      },
-    });
-    const errors = res.errors || res.data?.discountAutomaticAppCreate?.userErrors || [];
-    if (errors.length) {
-      return { ok: false, error: errors.map((e) => e.message).join('; ') };
+    try {
+      await writeConfigMetafield(shop, token, discountGid, config);
+    } catch (err) {
+      // A stored discount GID can go stale — e.g. Shopify deletes the app's
+      // automatic discount on uninstall, but a reinstall reuses the shop row.
+      // "Owner does not exist" means that discount is gone; recreate it once
+      // and retry so saving self-heals instead of failing.
+      if (!freshlyCreated && /owner does not exist/i.test(err.message)) {
+        logger.warn('Stored combined-shipping discount is stale; recreating', { shop, staleGid: discountGid });
+        if (!(await isFunctionDeployed(shop, token))) {
+          return { ok: false, needsDeploy: true, error: NEEDS_DEPLOY_ERROR };
+        }
+        discountGid = await createDiscount(shop, token);
+        await writeConfigMetafield(shop, token, discountGid, config);
+      } else {
+        throw err;
+      }
     }
-    discountGid = res.data.discountAutomaticAppCreate.automaticAppDiscount.discountId;
-    logger.info('Combined-shipping discount created', { shop, discountGid });
+  } catch (err) {
+    // Surface Shopify userErrors as a clean failure; re-throw anything else.
+    if (err.userErrors) return { ok: false, error: err.message };
+    throw err;
   }
 
-  await writeConfigMetafield(shop, token, discountGid, config);
   saveState.run({ shop, gid: discountGid, config: JSON.stringify(config) });
-
   logger.info('Combined-shipping config saved', { shop, config });
   return { ok: true, active: config.enabled, config };
 }
