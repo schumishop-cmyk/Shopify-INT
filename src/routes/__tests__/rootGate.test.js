@@ -54,11 +54,18 @@ describe('root auth-gate (immediate authentication after install)', () => {
     expect(res.text).toContain('window.top.location.href');
   });
 
-  test('serves the app (falls through) for an installed shop', async () => {
-    mockGetShop.mockReturnValue({ uninstalled_at: null, access_token: 't' });
+  test('serves the app (falls through) for an installed shop with an expiring token', async () => {
+    mockGetShop.mockReturnValue({ uninstalled_at: null, access_token: 't', token_expires_at: '2099-01-01T00:00:00Z' });
     const res = await request(app).get('/?shop=live.myshopify.com');
     expect(res.status).toBe(200);
     expect(res.headers.location).toBeUndefined();
+  });
+
+  test('re-authorizes an installed shop still holding a legacy non-expiring token', async () => {
+    mockGetShop.mockReturnValue({ uninstalled_at: null, access_token: 't', token_expires_at: null });
+    const res = await request(app).get('/?shop=legacy.myshopify.com');
+    expect(res.status).toBe(302);
+    expect(res.headers.location).toBe('/auth/begin?shop=legacy.myshopify.com');
   });
 
   test('falls through when no shop is supplied', async () => {

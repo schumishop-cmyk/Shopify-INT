@@ -60,15 +60,22 @@ app.get('/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// Root gate: an unauthenticated shop hitting "/" must be sent straight into
-// OAuth (App Store requirement: authenticate immediately after install, before
-// any UI). Installed shops fall through to the embedded frontend below.
+// Root gate: a shop hitting "/" must be sent into OAuth (App Store requirement:
+// authenticate immediately after install, before any UI) when it is either
+// not authenticated OR still holding a legacy non-expiring offline token.
+// Re-running OAuth upgrades such a token to an expiring one (Shopify flags API
+// calls made with non-expiring tokens). Installed shops with an expiring token
+// fall through to the embedded frontend below.
 app.get('/', (req, res, next) => {
   const shop = String(req.query.shop || '').toLowerCase();
   if (!shop || !isValidShop(shop)) return next();
 
   const row = getShop.get(shop);
-  if (row && !row.uninstalled_at) return next(); // installed → serve app
+  const installed = row && !row.uninstalled_at;
+  // Pre-2026-07 installs stored a non-expiring token (no token_expires_at);
+  // send them back through OAuth once to obtain an expiring/refreshable token.
+  const legacyToken = installed && !row.token_expires_at;
+  if (installed && !legacyToken) return next(); // installed, modern token → serve app
 
   const authPath = `/auth/begin?shop=${encodeURIComponent(shop)}`;
   const embedded = req.query.embedded === '1' || Boolean(req.query.host);
