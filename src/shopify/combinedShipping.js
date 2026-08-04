@@ -42,8 +42,20 @@ const METAFIELD_MUTATION = `
   }
 `;
 
+const DELETE_MUTATION = `
+  mutation discountAutomaticDelete($id: ID!) {
+    discountAutomaticDelete(id: $id) {
+      deletedAutomaticDiscountId
+      userErrors { field message }
+    }
+  }
+`;
+
 const saveState = db.prepare(`
   UPDATE shops SET combined_discount_gid = @gid, combined_config = @config WHERE shop = @shop
+`);
+const clearDiscountState = db.prepare(`
+  UPDATE shops SET combined_discount_gid = NULL, combined_config = NULL WHERE shop = ?
 `);
 const readState = db.prepare(`
   SELECT combined_discount_gid, combined_config FROM shops WHERE shop = ?
@@ -202,4 +214,27 @@ async function getCombinedShippingStatus(shop, token) {
   };
 }
 
-module.exports = { applyCombinedShipping, getCombinedShippingStatus, normalizeConfig };
+/**
+ * Removes the combined-shipping automatic discount from the store. Used when
+ * billing lapses; the shop's saved configuration in our DB is cleared too, so
+ * resubscribing recreates the discount fresh on the next save.
+ */
+async function removeCombinedShippingDiscount(shop, token) {
+  const state = readState.get(shop);
+  const gid = state?.combined_discount_gid;
+  if (!gid) return { ok: true, removed: false };
+
+  const res = await adminGraphql(shop, token, DELETE_MUTATION, { id: gid });
+  const errors = res.errors || res.data?.discountAutomaticDelete?.userErrors || [];
+  // Already gone (e.g. merchant deleted it manually) — treat as success
+  if (errors.length && !errors.some((e) => /does not exist/i.test(e.message))) {
+    return { ok: false, error: errors.map((e) => e.message).join('; ') };
+  }
+
+  clearDiscountState.run(shop);
+  return { ok: true, removed: true };
+}
+
+module.exports = {
+  applyCombinedShipping, getCombinedShippingStatus, normalizeConfig, removeCombinedShippingDiscount,
+};

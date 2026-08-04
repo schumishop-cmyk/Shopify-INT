@@ -303,4 +303,27 @@ async function syncTagProfiles(shop, token, rules, { locationIds, currencyCode }
   return { created, updated, removed, warnings };
 }
 
-module.exports = { syncTagProfiles, tagQuery, buildTagZones };
+/**
+ * Removes every tag-rule delivery profile this app has created for the shop
+ * (e.g. "App: Aufpreis für Sperrgut-Produkte"). Their products fall back to
+ * the default profile automatically. Used when billing lapses.
+ */
+async function removeAllTagProfiles(shop, token) {
+  const tracked = listTrackedProfiles.all(shop);
+  let removed = 0;
+  const warnings = [];
+
+  for (const { gid } of tracked) {
+    try {
+      await removeTagProfile(shop, token, gid);
+      untrackProfile.run(shop, gid);
+      removed++;
+    } catch (err) {
+      warnings.push(`Tag-Profil konnte nicht entfernt werden (${err.message}).`);
+    }
+  }
+
+  return { ok: warnings.length === 0, removed, warnings };
+}
+
+module.exports = { syncTagProfiles, tagQuery, buildTagZones, removeAllTagProfiles };

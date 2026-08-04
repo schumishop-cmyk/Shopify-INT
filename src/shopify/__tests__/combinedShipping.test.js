@@ -13,7 +13,7 @@ jest.mock('../../db/database', () => ({
   exec: jest.fn(), pragma: jest.fn(), transaction: jest.fn((fn) => fn),
 }));
 
-const { applyCombinedShipping, normalizeConfig } = require('../combinedShipping');
+const { applyCombinedShipping, normalizeConfig, removeCombinedShippingDiscount } = require('../combinedShipping');
 
 const SHOP = 'test.myshopify.com';
 const TOKEN = 'tok';
@@ -136,5 +136,41 @@ describe('applyCombinedShipping', () => {
     const res = await applyCombinedShipping(SHOP, TOKEN, BODY);
     expect(res.ok).toBe(false);
     expect(res.error).toMatch(/schon vergeben/);
+  });
+});
+
+describe('removeCombinedShippingDiscount', () => {
+  test('deletes the discount and reports it was removed', async () => {
+    mockState.row = { combined_discount_gid: 'gid://discount/1', combined_config: '{}' };
+    mockGraphql.mockResolvedValueOnce({ data: { discountAutomaticDelete: { deletedAutomaticDiscountId: 'gid://discount/1', userErrors: [] } } });
+
+    const res = await removeCombinedShippingDiscount(SHOP, TOKEN);
+
+    expect(res).toEqual({ ok: true, removed: true });
+    expect(mockGraphql.mock.calls[0][3].id).toBe('gid://discount/1');
+  });
+
+  test('is a no-op when the shop has no discount on record', async () => {
+    mockState.row = undefined;
+    const res = await removeCombinedShippingDiscount(SHOP, TOKEN);
+    expect(res).toEqual({ ok: true, removed: false });
+    expect(mockGraphql).not.toHaveBeenCalled();
+  });
+
+  test('treats "does not exist" as already-removed success', async () => {
+    mockState.row = { combined_discount_gid: 'gid://discount/gone', combined_config: '{}' };
+    mockGraphql.mockResolvedValueOnce({ data: { discountAutomaticDelete: { deletedAutomaticDiscountId: null, userErrors: [{ field: 'id', message: 'Owner does not exist' }] } } });
+
+    const res = await removeCombinedShippingDiscount(SHOP, TOKEN);
+    expect(res).toEqual({ ok: true, removed: true });
+  });
+
+  test('surfaces other errors', async () => {
+    mockState.row = { combined_discount_gid: 'gid://discount/1', combined_config: '{}' };
+    mockGraphql.mockResolvedValueOnce({ errors: [{ message: 'network down' }] });
+
+    const res = await removeCombinedShippingDiscount(SHOP, TOKEN);
+    expect(res.ok).toBe(false);
+    expect(res.error).toMatch(/network down/);
   });
 });

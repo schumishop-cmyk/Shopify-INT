@@ -105,6 +105,16 @@ Stand: Juli 2026 · App: **MyBridge** (`client_id 9193536353d7d304a0c2414989304f
   Standort-IDs des Shops als Versandursprünge.
 - **Warum `write_discounts`?** Der kombinierte Versand läuft über einen
   automatischen App-Rabatt (Shipping-Discount-Function).
+- **Billing-Lifecycle:** Bei `app_subscriptions/update` mit Status
+  `CANCELLED`/`DECLINED`/`EXPIRED`/`FROZEN` (Trial ohne Zahlung ausgelaufen,
+  Zahlung fehlgeschlagen, Abo gekündigt) entfernt die App automatisch ihre
+  live erzeugten Shopify-Daten — die synchronisierten Versandtarife/-zonen,
+  Tag-Profile (Sperrgut) und den automatischen "Kombinierter Versand"-Rabatt
+  (`src/shopify/subscriptionLifecycle.js`). Die Regelkonfiguration in der
+  eigenen DB bleibt erhalten, sodass ein erneutes Abo alles beim nächsten
+  Sync/Speichern automatisch wiederherstellt, ohne dass der Händler etwas
+  neu eingeben muss. Webhook wird beim OAuth-Callback registriert
+  (`registerSubscriptionWebhook`).
 - **Billing:** App nutzt **Shopify Managed Pricing** (Pflicht laut Review
   1.2.1 — Off-Platform-Billing ist verboten). Pläne werden im Partner
   Dashboard definiert; Shopify hostet die Bezahlseite. Die App liest den

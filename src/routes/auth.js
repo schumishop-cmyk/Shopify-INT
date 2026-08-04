@@ -2,7 +2,7 @@ const { Router } = require('express');
 const crypto = require('crypto');
 const { upsertShop } = require('../db/shops');
 const { seedDefaultRules } = require('../db/rules');
-const { registerUninstallWebhook } = require('../shopify/webhookRegistration');
+const { registerUninstallWebhook, registerSubscriptionWebhook } = require('../shopify/webhookRegistration');
 const {
   isValidShop, publicBaseUrl, buildAuthorizeUrl, verifyCallbackHmac, exchangeCode,
 } = require('../shopify/oauth');
@@ -79,8 +79,11 @@ router.get('/auth/callback', async (req, res) => {
 
     seedDefaultRules(shop);
     // Legacy install flow can't declare webhooks in the TOML — subscribe
-    // app/uninstalled here so we can clean up on removal.
+    // app/uninstalled here so we can clean up on removal, and
+    // app_subscriptions/update so we can tear down live shipping data when
+    // billing lapses (trial ends unpaid, payment fails, plan cancelled).
     await registerUninstallWebhook(shop, tokens.access_token);
+    await registerSubscriptionWebhook(shop, tokens.access_token);
 
     logger.info('Shop installed', { shop, expiringToken: Boolean(tokens.refresh_token) });
 

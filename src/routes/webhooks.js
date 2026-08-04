@@ -9,9 +9,15 @@ const { Router } = require('express');
 const crypto = require('crypto');
 const db = require('../db/database');
 const { markUninstalled } = require('../db/shops');
+const { getValidToken } = require('../shopify/tokens');
+const { teardownBillingLapsed } = require('../shopify/subscriptionLifecycle');
 const logger = require('../utils/logger');
 
 const router = Router();
+
+// AppSubscriptionStatus values that mean billing is no longer active
+// (PENDING/ACTIVE are excluded — those keep the app's data intact)
+const LAPSED_SUBSCRIPTION_STATUSES = new Set(['CANCELLED', 'DECLINED', 'EXPIRED', 'FROZEN']);
 
 function verifyWebhookHmac(req, res, next) {
   const secret = process.env.SHOPIFY_API_SECRET;
@@ -43,6 +49,29 @@ router.post('/webhooks/app/uninstalled', verifyWebhookHmac, (req, res) => {
     markUninstalled.run(shop);
     logger.info('Shop uninstalled', { shop });
   }
+  res.sendStatus(200);
+});
+
+/**
+ * BILLING LAPSED — trial ended unpaid, payment failed, or the merchant
+ * cancelled the plan. Removes the live shipping rates, tag profiles, and
+ * combined-shipping discount this app created; our own rule config in the DB
+ * is left intact so a resubscribe recreates everything on the next sync.
+ */
+router.post('/webhooks/app_subscriptions/update', verifyWebhookHmac, async (req, res) => {
+  const shop = req.headers['x-shopify-shop-domain'];
+  const status = req.body?.app_subscription?.status;
+  logger.info('App subscription update received', { shop, status });
+
+  if (shop && LAPSED_SUBSCRIPTION_STATUSES.has(status)) {
+    try {
+      const token = await getValidToken(shop);
+      await teardownBillingLapsed(shop, token);
+    } catch (err) {
+      logger.error('Billing-lapse teardown failed', { shop, status, error: err.message });
+    }
+  }
+
   res.sendStatus(200);
 });
 

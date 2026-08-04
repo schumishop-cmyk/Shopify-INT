@@ -13,7 +13,7 @@ jest.mock('../../db/database', () => ({
   exec: jest.fn(), pragma: jest.fn(), transaction: jest.fn((fn) => fn),
 }));
 
-const { syncTagProfiles, tagQuery, buildTagZones } = require('../tagProfileSync');
+const { syncTagProfiles, tagQuery, buildTagZones, removeAllTagProfiles } = require('../tagProfileSync');
 
 const SHOP = 'test.myshopify.com';
 const TOKEN = 'tok';
@@ -172,5 +172,46 @@ describe('syncTagProfiles', () => {
     const res = await syncTagProfiles(SHOP, TOKEN, [plainRule], CTX);
     expect(mockGraphql).not.toHaveBeenCalled();
     expect(res.created + res.updated + res.removed).toBe(0);
+  });
+});
+
+describe('removeAllTagProfiles', () => {
+  test('removes every tracked profile', async () => {
+    trackedRows.push(
+      { gid: 'gid://profile/1', meta: 'rule-a' },
+      { gid: 'gid://profile/2', meta: 'rule-b' },
+    );
+    mockGraphql
+      .mockResolvedValueOnce({ data: { deliveryProfileRemove: { job: { id: 'j1' }, userErrors: [] } } })
+      .mockResolvedValueOnce({ data: { deliveryProfileRemove: { job: { id: 'j2' }, userErrors: [] } } });
+
+    const res = await removeAllTagProfiles(SHOP, TOKEN);
+
+    expect(res).toEqual({ ok: true, removed: 2, warnings: [] });
+    expect(mockGraphql).toHaveBeenCalledTimes(2);
+    expect(mockGraphql.mock.calls[0][3].id).toBe('gid://profile/1');
+    expect(mockGraphql.mock.calls[1][3].id).toBe('gid://profile/2');
+  });
+
+  test('is a no-op when nothing is tracked', async () => {
+    const res = await removeAllTagProfiles(SHOP, TOKEN);
+    expect(res).toEqual({ ok: true, removed: 0, warnings: [] });
+    expect(mockGraphql).not.toHaveBeenCalled();
+  });
+
+  test('collects a warning and keeps going when one deletion fails', async () => {
+    trackedRows.push(
+      { gid: 'gid://profile/1', meta: 'rule-a' },
+      { gid: 'gid://profile/2', meta: 'rule-b' },
+    );
+    mockGraphql
+      .mockResolvedValueOnce({ errors: [{ message: 'boom' }] })
+      .mockResolvedValueOnce({ data: { deliveryProfileRemove: { job: { id: 'j2' }, userErrors: [] } } });
+
+    const res = await removeAllTagProfiles(SHOP, TOKEN);
+
+    expect(res.ok).toBe(false);
+    expect(res.removed).toBe(1);
+    expect(res.warnings[0]).toMatch(/boom/);
   });
 });

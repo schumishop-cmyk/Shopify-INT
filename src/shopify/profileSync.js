@@ -378,4 +378,51 @@ async function syncShopProfile(shop, token, rules) {
   };
 }
 
-module.exports = { buildSyncPlan, buildMethodDefinitions, normalizeProfile, syncShopProfile };
+/**
+ * Removes every zone/rate this app has ever added to the shop's default
+ * delivery profile, leaving the merchant's own zones and rates untouched.
+ * Used when billing lapses so the store reverts to its pre-app shipping
+ * setup; the tracked GIDs are only cleared after Shopify confirms deletion.
+ */
+async function removeSyncedProfile(shop, token) {
+  const tracked = listTracked.all(shop);
+  const methodDefinitionsToDelete = tracked.filter((t) => t.kind === 'method_definition').map((t) => t.gid);
+  const zonesToDelete = tracked.filter((t) => t.kind === 'zone').map((t) => t.gid);
+
+  if (!methodDefinitionsToDelete.length && !zonesToDelete.length) {
+    return { ok: true, removedRates: 0, removedZones: 0 };
+  }
+
+  const queryRes = await adminGraphql(shop, token, PROFILE_QUERY);
+  if (queryRes.errors) {
+    return { ok: false, error: queryRes.errors.map((e) => e.message).join('; ') };
+  }
+  const profile = normalizeProfile(queryRes.data);
+  if (!profile) {
+    // No profile to remove anything from — nothing left to track either
+    clearTracked.run(shop);
+    return { ok: true, removedRates: 0, removedZones: 0 };
+  }
+
+  const input = {
+    ...(methodDefinitionsToDelete.length ? { methodDefinitionsToDelete } : {}),
+    ...(zonesToDelete.length ? { zonesToDelete } : {}),
+    locationGroupsToUpdate: [{ id: profile.locationGroupId }],
+  };
+
+  const mutRes = await adminGraphql(shop, token, PROFILE_MUTATION, { id: profile.profileId, profile: input });
+  if (mutRes.errors) {
+    return { ok: false, error: mutRes.errors.map((e) => e.message).join('; ') };
+  }
+  const userErrors = mutRes.data?.deliveryProfileUpdate?.userErrors || [];
+  if (userErrors.length > 0) {
+    return { ok: false, error: userErrors.map((e) => e.message).join('; ') };
+  }
+
+  clearTracked.run(shop);
+  return { ok: true, removedRates: methodDefinitionsToDelete.length, removedZones: zonesToDelete.length };
+}
+
+module.exports = {
+  buildSyncPlan, buildMethodDefinitions, normalizeProfile, syncShopProfile, removeSyncedProfile,
+};
