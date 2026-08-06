@@ -18,6 +18,8 @@ export default function CombinedShippingCard({ status, saving, error, onSave }) 
   const [flatAmount, setFlatAmount] = useState('3.00');
   const [detectVendor, setDetectVendor] = useState('');
   const [fulfillmentRate, setFulfillmentRate] = useState('3.50');
+  // Empty means "let the backend pick the label matching the shop's country"
+  const [discountTitle, setDiscountTitle] = useState('');
 
   useEffect(() => {
     if (status?.config) {
@@ -31,6 +33,9 @@ export default function CombinedShippingCard({ status, saving, error, onSave }) 
       }
       if (status.config.fulfillmentRateCents != null) {
         setFulfillmentRate((status.config.fulfillmentRateCents / 100).toFixed(2));
+      }
+      if (status.config.discountTitle) {
+        setDiscountTitle(status.config.discountTitle);
       }
     }
   }, [status]);
@@ -49,7 +54,7 @@ export default function CombinedShippingCard({ status, saving, error, onSave }) 
           </InlineStack>
           <Button
             variant="primary"
-            onClick={() => onSave({ enabled, mode, flatAmount, detectVendor, fulfillmentRate })}
+            onClick={() => onSave({ enabled, mode, flatAmount, detectVendor, fulfillmentRate, discountTitle })}
             loading={saving}
             disabled={needsDeploy}
           >
@@ -126,6 +131,17 @@ export default function CombinedShippingCard({ status, saving, error, onSave }) 
             helpText={t('combined.flatAmountHelp', { example: formatMoney(300) })}
           />
         )}
+
+        <TextField
+          label={t('combined.discountTitle')}
+          value={discountTitle}
+          onChange={setDiscountTitle}
+          autoComplete="off"
+          disabled={!enabled}
+          maxLength={255}
+          placeholder={t('combined.discountTitlePlaceholder')}
+          helpText={t('combined.discountTitleHelp')}
+        />
       </BlockStack>
     </Card>
   );

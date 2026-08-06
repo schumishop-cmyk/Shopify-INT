@@ -3,6 +3,11 @@ jest.mock('../adminGraphql', () => ({
   adminGraphql: (...args) => mockGraphql(...args),
 }));
 
+// Keeps the checkout-label lookup out of the adminGraphql call sequence the
+// tests below assert on
+const mockGetShopContext = jest.fn();
+jest.mock('../shopContext', () => ({ getShopContext: (...a) => mockGetShopContext(...a) }));
+
 const mockState = { row: undefined };
 jest.mock('../../db/database', () => ({
   prepare: () => ({
@@ -13,7 +18,9 @@ jest.mock('../../db/database', () => ({
   exec: jest.fn(), pragma: jest.fn(), transaction: jest.fn((fn) => fn),
 }));
 
-const { applyCombinedShipping, normalizeConfig, removeCombinedShippingDiscount } = require('../combinedShipping');
+const {
+  applyCombinedShipping, normalizeConfig, removeCombinedShippingDiscount, defaultDiscountTitle,
+} = require('../combinedShipping');
 
 const SHOP = 'test.myshopify.com';
 const TOKEN = 'tok';
@@ -30,6 +37,7 @@ const BODY = {
 beforeEach(() => {
   mockGraphql.mockReset();
   mockState.row = undefined;
+  mockGetShopContext.mockReset().mockResolvedValue({ countryCode: 'DE', currencyCode: 'EUR', weightUnit: 'GRAMS' });
 });
 
 describe('normalizeConfig', () => {
@@ -86,6 +94,8 @@ describe('applyCombinedShipping', () => {
     const createInput = mockGraphql.mock.calls[1][3].discount;
     expect(createInput.functionHandle).toBe('combined-shipping');
     expect(createInput.discountClasses).toEqual(['SHIPPING']);
+    // A DE shop with no explicit label gets the German default
+    expect(createInput.title).toBe('Kombinierter Versand');
 
     const metafieldCall = mockGraphql.mock.calls[2][3];
     expect(metafieldCall.metafields[0].ownerId).toBe('gid://discount/1');
@@ -95,11 +105,12 @@ describe('applyCombinedShipping', () => {
       flatAmountCents: 150,
       detectVendors: ['Spreadconnect'],
       fulfillmentRateCents: 350,
+      discountTitle: 'Kombinierter Versand',
     });
   });
 
   test('reuses an existing discount and only rewrites the metafield', async () => {
-    mockState.row = { combined_discount_gid: 'gid://discount/keep', combined_config: '{}' };
+    mockState.row = { combined_discount_gid: 'gid://discount/keep', combined_config: JSON.stringify({ discountTitle: 'Kombinierter Versand' }) };
     mockGraphql.mockResolvedValueOnce({ data: { metafieldsSet: { metafields: [{ id: 'mf' }], userErrors: [] } } });
 
     const res = await applyCombinedShipping(SHOP, TOKEN, { enabled: false });
@@ -110,7 +121,7 @@ describe('applyCombinedShipping', () => {
   });
 
   test('recreates a stale discount when the metafield owner no longer exists', async () => {
-    mockState.row = { combined_discount_gid: 'gid://discount/stale', combined_config: '{}' };
+    mockState.row = { combined_discount_gid: 'gid://discount/stale', combined_config: JSON.stringify({ discountTitle: 'Kombinierter Versand' }) };
     mockGraphql
       // 1) write to the stale discount → Shopify: owner does not exist
       .mockResolvedValueOnce({ data: { metafieldsSet: { metafields: [], userErrors: [{ field: ['ownerId'], message: 'Owner does not exist' }] } } })
@@ -136,6 +147,124 @@ describe('applyCombinedShipping', () => {
     const res = await applyCombinedShipping(SHOP, TOKEN, BODY);
     expect(res.ok).toBe(false);
     expect(res.error).toMatch(/schon vergeben/);
+  });
+});
+
+describe('checkout label (discount title)', () => {
+  test('defaults to German for German-speaking countries, English elsewhere', () => {
+    expect(defaultDiscountTitle('DE')).toBe('Kombinierter Versand');
+    expect(defaultDiscountTitle('AT')).toBe('Kombinierter Versand');
+    expect(defaultDiscountTitle('ch')).toBe('Kombinierter Versand');
+    expect(defaultDiscountTitle('US')).toBe('Combined shipping');
+    expect(defaultDiscountTitle('FR')).toBe('Combined shipping');
+    expect(defaultDiscountTitle(null)).toBe('Combined shipping');
+  });
+
+  test('a US shop gets the English label on the live discount', async () => {
+    mockGetShopContext.mockResolvedValue({ countryCode: 'US' });
+    mockGraphql
+      .mockResolvedValueOnce({ data: { shopifyFunctions: { nodes: [{ id: 'fn-1', apiType: 'discount' }] } } })
+      .mockResolvedValueOnce({ data: { discountAutomaticAppCreate: { automaticAppDiscount: { discountId: 'gid://d/1' }, userErrors: [] } } })
+      .mockResolvedValueOnce({ data: { metafieldsSet: { metafields: [{ id: 'mf' }], userErrors: [] } } });
+
+    const res = await applyCombinedShipping(SHOP, TOKEN, BODY);
+
+    expect(res.ok).toBe(true);
+    expect(mockGraphql.mock.calls[1][3].discount.title).toBe('Combined shipping');
+  });
+
+  test("the merchant's own label wins over the country default", async () => {
+    mockGraphql
+      .mockResolvedValueOnce({ data: { shopifyFunctions: { nodes: [{ id: 'fn-1', apiType: 'discount' }] } } })
+      .mockResolvedValueOnce({ data: { discountAutomaticAppCreate: { automaticAppDiscount: { discountId: 'gid://d/1' }, userErrors: [] } } })
+      .mockResolvedValueOnce({ data: { metafieldsSet: { metafields: [{ id: 'mf' }], userErrors: [] } } });
+
+    await applyCombinedShipping(SHOP, TOKEN, { ...BODY, discountTitle: '  Sammelversand  ' });
+
+    // trimmed, and no country lookup needed
+    expect(mockGraphql.mock.calls[1][3].discount.title).toBe('Sammelversand');
+    expect(mockGetShopContext).not.toHaveBeenCalled();
+  });
+
+  test('renames the live discount when the merchant changes the label', async () => {
+    mockState.row = {
+      combined_discount_gid: 'gid://d/1',
+      combined_config: JSON.stringify({ enabled: true, mode: 'highest_only', discountTitle: 'Kombinierter Versand' }),
+    };
+    mockGraphql
+      // rename first, then the metafield write
+      .mockResolvedValueOnce({ data: { discountAutomaticAppUpdate: { automaticAppDiscount: { discountId: 'gid://d/1' }, userErrors: [] } } })
+      .mockResolvedValueOnce({ data: { metafieldsSet: { metafields: [{ id: 'mf' }], userErrors: [] } } });
+
+    const res = await applyCombinedShipping(SHOP, TOKEN, { ...BODY, discountTitle: 'Combined shipping' });
+
+    expect(res.ok).toBe(true);
+    expect(mockGraphql.mock.calls[0][3]).toEqual({
+      id: 'gid://d/1',
+      discount: { title: 'Combined shipping' },
+    });
+  });
+
+  test('leaves the live discount alone when the label is unchanged', async () => {
+    mockState.row = {
+      combined_discount_gid: 'gid://d/1',
+      combined_config: JSON.stringify({ enabled: true, mode: 'highest_only', discountTitle: 'Kombinierter Versand' }),
+    };
+    mockGraphql.mockResolvedValueOnce({ data: { metafieldsSet: { metafields: [{ id: 'mf' }], userErrors: [] } } });
+
+    const res = await applyCombinedShipping(SHOP, TOKEN, { ...BODY, discountTitle: 'Kombinierter Versand' });
+
+    expect(res.ok).toBe(true);
+    // only the metafield write — no rename mutation
+    expect(mockGraphql).toHaveBeenCalledTimes(1);
+  });
+
+  test('keeps the stored label when the merchant leaves the field empty', async () => {
+    mockState.row = {
+      combined_discount_gid: 'gid://d/1',
+      combined_config: JSON.stringify({ enabled: true, mode: 'highest_only', discountTitle: 'Sammelversand' }),
+    };
+    mockGraphql.mockResolvedValueOnce({ data: { metafieldsSet: { metafields: [{ id: 'mf' }], userErrors: [] } } });
+
+    await applyCombinedShipping(SHOP, TOKEN, { ...BODY, discountTitle: '' });
+
+    expect(JSON.parse(mockGraphql.mock.calls[0][3].metafields[0].value).discountTitle).toBe('Sammelversand');
+    expect(mockGetShopContext).not.toHaveBeenCalled();
+  });
+
+  test('migrates a discount created before the label was configurable', async () => {
+    // Pre-existing shop: discount is live but no label was ever stored, so the
+    // live title is still the old hardcoded "Kombinierter Versand (App)"
+    mockState.row = {
+      combined_discount_gid: 'gid://d/1',
+      combined_config: JSON.stringify({ enabled: true, mode: 'highest_only' }),
+    };
+    mockGraphql
+      .mockResolvedValueOnce({ data: { discountAutomaticAppUpdate: { automaticAppDiscount: { discountId: 'gid://d/1' }, userErrors: [] } } })
+      .mockResolvedValueOnce({ data: { metafieldsSet: { metafields: [{ id: 'mf' }], userErrors: [] } } });
+
+    const res = await applyCombinedShipping(SHOP, TOKEN, BODY);
+
+    expect(res.ok).toBe(true);
+    expect(mockGraphql.mock.calls[0][3].discount.title).toBe('Kombinierter Versand');
+  });
+
+  test('falls back to English when the country lookup fails', async () => {
+    mockGetShopContext.mockRejectedValue(new Error('network down'));
+    mockGraphql
+      .mockResolvedValueOnce({ data: { shopifyFunctions: { nodes: [{ id: 'fn-1', apiType: 'discount' }] } } })
+      .mockResolvedValueOnce({ data: { discountAutomaticAppCreate: { automaticAppDiscount: { discountId: 'gid://d/1' }, userErrors: [] } } })
+      .mockResolvedValueOnce({ data: { metafieldsSet: { metafields: [{ id: 'mf' }], userErrors: [] } } });
+
+    const res = await applyCombinedShipping(SHOP, TOKEN, BODY);
+
+    expect(res.ok).toBe(true);
+    expect(mockGraphql.mock.calls[1][3].discount.title).toBe('Combined shipping');
+  });
+
+  test('rejects an over-long label', () => {
+    const tooLong = 'x'.repeat(256);
+    expect(normalizeConfig(BODY, tooLong).errorCode).toBe('discountTitleTooLong');
   });
 });
 

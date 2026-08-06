@@ -103,7 +103,10 @@
     "modeHighestOnly": "Charge only the highest rate (extra locations free)",
     "modeFlatAddition": "Flat fee per extra location",
     "flatAmount": "Flat fee per extra location ({currency})",
-    "flatAmountHelp": "Example: {example} — the customer pays the highest rate in full, and each extra location adds this flat amount."
+    "flatAmountHelp": "Example: {example} — the customer pays the highest rate in full, and each extra location adds this flat amount.",
+    "discountTitle": "Checkout label",
+    "discountTitleHelp": "This is what customers see on the checkout's discount line. Leave empty to use the label that matches your country automatically.",
+    "discountTitlePlaceholder": "Combined shipping"
   },
   "warnings": {
     "weightAndPriceCombined": "Rule \"{rule}\": Shopify rates can't combine weight and price conditions — the price condition was ignored.",
@@ -119,6 +122,7 @@
   "errors": {
     "noDeliveryProfile": "No delivery profile found — create one in Shopify under Settings → Shipping.",
     "invalidFlatAmount": "Invalid flat amount",
+    "discountTitleTooLong": "The checkout label is too long (255 characters maximum).",
     "vendorRequired": "Enter the fulfillment partner's vendor name (e.g. \"Printful\").",
     "fulfillmentRateRequired": "Enter the fulfillment partner's shipping rate (e.g. 3.50).",
     "flatAmountTooHigh": "The flat fee must be lower than the partner's shipping rate — otherwise there is nothing to discount.",

@@ -103,7 +103,10 @@
     "modeHighestOnly": "Nur die teuerste Rate zahlen (weitere Standorte kostenlos)",
     "modeFlatAddition": "Pauschale pro zusätzlichem Standort",
     "flatAmount": "Pauschale pro zusätzlichem Standort ({currency})",
-    "flatAmountHelp": "Beispiel: {example} — der Kunde zahlt die teuerste Rate voll, jeder weitere Standort kostet pauschal diesen Betrag."
+    "flatAmountHelp": "Beispiel: {example} — der Kunde zahlt die teuerste Rate voll, jeder weitere Standort kostet pauschal diesen Betrag.",
+    "discountTitle": "Bezeichnung im Checkout",
+    "discountTitleHelp": "Diesen Text sieht der Kunde im Checkout in der Rabattzeile. Leer lassen, um automatisch die passende Bezeichnung für dein Land zu verwenden.",
+    "discountTitlePlaceholder": "Kombinierter Versand"
   },
   "warnings": {
     "weightAndPriceCombined": "Regel „{rule}\": Shopify-Raten können Gewichts- und Preisbedingungen nicht kombinieren — die Preisbedingung wird ignoriert.",
@@ -119,6 +122,7 @@
   "errors": {
     "noDeliveryProfile": "Kein Versandprofil gefunden — bitte in Shopify unter Einstellungen → Versand ein Profil anlegen.",
     "invalidFlatAmount": "Ungültiger Pauschalbetrag",
+    "discountTitleTooLong": "Die Bezeichnung im Checkout ist zu lang (maximal 255 Zeichen).",
     "vendorRequired": "Bitte den Vendor des Fulfillment-Partners angeben (z.B. „Spreadconnect\").",
     "fulfillmentRateRequired": "Bitte die Versandrate des Fulfillment-Partners angeben (z.B. 3.50).",
     "flatAmountTooHigh": "Die Pauschale muss kleiner sein als die Versandrate des Partners — sonst gibt es nichts zu rabattieren.",

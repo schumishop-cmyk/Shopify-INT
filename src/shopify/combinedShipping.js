@@ -8,13 +8,33 @@
  * metafield the function reads at checkout.
  */
 const { adminGraphql } = require('./adminGraphql');
+const { getShopContext } = require('./shopContext');
 const db = require('../db/database');
 const logger = require('../utils/logger');
 
 const METAFIELD_NAMESPACE = '$app:combined-shipping';
 const METAFIELD_KEY = 'config';
-const DISCOUNT_TITLE = 'Kombinierter Versand (App)';
 const FUNCTION_HANDLE = 'combined-shipping';
+
+/**
+ * The discount title is shown to SHOPPERS on the checkout's shipping line, so
+ * it follows the store's market rather than the merchant's admin language.
+ * Merchants can override it (config.discountTitle) — a multi-language store
+ * knows better than any heuristic what its buyers should read.
+ */
+const DISCOUNT_TITLES = {
+  de: 'Kombinierter Versand',
+  en: 'Combined shipping',
+};
+const GERMAN_SPEAKING = new Set(['DE', 'AT', 'CH']);
+const MAX_TITLE_LENGTH = 255;
+
+/** Default checkout label for a shop, derived from its country. */
+function defaultDiscountTitle(countryCode) {
+  return GERMAN_SPEAKING.has(String(countryCode || '').toUpperCase())
+    ? DISCOUNT_TITLES.de
+    : DISCOUNT_TITLES.en;
+}
 
 const FUNCTIONS_QUERY = `
   query {
@@ -51,6 +71,15 @@ const DELETE_MUTATION = `
   }
 `;
 
+const UPDATE_MUTATION = `
+  mutation discountAutomaticAppUpdate($id: ID!, $discount: DiscountAutomaticAppInput!) {
+    discountAutomaticAppUpdate(id: $id, automaticAppDiscount: $discount) {
+      automaticAppDiscount { discountId }
+      userErrors { field message }
+    }
+  }
+`;
+
 const saveState = db.prepare(`
   UPDATE shops SET combined_discount_gid = @gid, combined_config = @config WHERE shop = @shop
 `);
@@ -61,12 +90,23 @@ const readState = db.prepare(`
   SELECT combined_discount_gid, combined_config FROM shops WHERE shop = ?
 `);
 
-function normalizeConfig(body) {
+/**
+ * Validates and normalizes the merchant's input.
+ * `resolvedTitle` is the checkout label already resolved by the caller (explicit
+ * input, previously stored value, or the country default).
+ */
+function normalizeConfig(body, resolvedTitle) {
   const mode = body.mode === 'flat_addition' ? 'flat_addition' : 'highest_only';
   const config = {
     enabled: body.enabled !== false,
     mode,
   };
+
+  const title = String(resolvedTitle ?? body.discountTitle ?? '').trim();
+  if (title.length > MAX_TITLE_LENGTH) {
+    return { errorCode: 'discountTitleTooLong', error: `Discount title must be at most ${MAX_TITLE_LENGTH} characters` };
+  }
+  if (title) config.discountTitle = title;
 
   if (mode === 'flat_addition') {
     const cents = Math.round(parseFloat(body.flatAmount ?? 0) * 100);
@@ -129,10 +169,10 @@ async function writeConfigMetafield(shop, token, discountGid, config) {
 const NEEDS_DEPLOY_ERROR = 'The shipping function is not deployed yet. Run `shopify app deploy` once (see extensions/combined-shipping/README.md).';
 
 /** Creates the automatic app discount and returns its GID (throws on userErrors). */
-async function createDiscount(shop, token) {
+async function createDiscount(shop, token, title) {
   const res = await adminGraphql(shop, token, CREATE_MUTATION, {
     discount: {
-      title: DISCOUNT_TITLE,
+      title,
       functionHandle: FUNCTION_HANDLE,
       startsAt: new Date().toISOString(),
       discountClasses: ['SHIPPING'],
@@ -150,15 +190,52 @@ async function createDiscount(shop, token) {
   return gid;
 }
 
+/** Renames an existing app discount (throws on userErrors). */
+async function renameDiscount(shop, token, discountGid, title) {
+  const res = await adminGraphql(shop, token, UPDATE_MUTATION, {
+    id: discountGid,
+    discount: { title },
+  });
+  const errors = res.errors || res.data?.discountAutomaticAppUpdate?.userErrors || [];
+  if (errors.length) {
+    const err = new Error(errors.map((e) => e.message).join('; '));
+    err.userErrors = errors;
+    throw err;
+  }
+  logger.info('Combined-shipping discount renamed', { shop, title });
+}
+
+/**
+ * Decides the checkout label: what the merchant typed, else what was stored
+ * before, else the default for the shop's country. Only the very first save
+ * without an explicit title needs the extra shop lookup.
+ */
+async function resolveDiscountTitle(shop, token, body, storedConfig) {
+  const explicit = String(body.discountTitle ?? '').trim();
+  if (explicit) return explicit;
+  if (storedConfig?.discountTitle) return storedConfig.discountTitle;
+
+  try {
+    const { countryCode } = await getShopContext(shop, token);
+    return defaultDiscountTitle(countryCode);
+  } catch (err) {
+    logger.warn('Shop country lookup failed — using English discount title', { shop, error: err.message });
+    return DISCOUNT_TITLES.en;
+  }
+}
+
 /**
  * Activates (or reconfigures) combined shipping for a shop.
  * Returns { ok, active, config } or { ok: false, error, needsDeploy? }.
  */
 async function applyCombinedShipping(shop, token, body) {
-  const { config, error, errorCode } = normalizeConfig(body);
+  const state = readState.get(shop);
+  const storedConfig = state?.combined_config ? JSON.parse(state.combined_config) : null;
+
+  const title = await resolveDiscountTitle(shop, token, body, storedConfig);
+  const { config, error, errorCode } = normalizeConfig(body, title);
   if (error) return { ok: false, error, errorCode };
 
-  const state = readState.get(shop);
   let discountGid = state?.combined_discount_gid;
   let freshlyCreated = false;
 
@@ -167,8 +244,13 @@ async function applyCombinedShipping(shop, token, body) {
       if (!(await isFunctionDeployed(shop, token))) {
         return { ok: false, needsDeploy: true, errorCode: 'needsDeploy', error: NEEDS_DEPLOY_ERROR };
       }
-      discountGid = await createDiscount(shop, token);
+      discountGid = await createDiscount(shop, token, config.discountTitle);
       freshlyCreated = true;
+    } else if (storedConfig?.discountTitle !== config.discountTitle) {
+      // Push the label to the live discount whenever it differs from what we
+      // last stored. This also migrates discounts created before the label was
+      // configurable (stored title absent, live title still "… (App)").
+      await renameDiscount(shop, token, discountGid, config.discountTitle);
     }
 
     try {
@@ -183,7 +265,7 @@ async function applyCombinedShipping(shop, token, body) {
         if (!(await isFunctionDeployed(shop, token))) {
           return { ok: false, needsDeploy: true, errorCode: 'needsDeploy', error: NEEDS_DEPLOY_ERROR };
         }
-        discountGid = await createDiscount(shop, token);
+        discountGid = await createDiscount(shop, token, config.discountTitle);
         await writeConfigMetafield(shop, token, discountGid, config);
       } else {
         throw err;
@@ -241,4 +323,5 @@ async function removeCombinedShippingDiscount(shop, token) {
 
 module.exports = {
   applyCombinedShipping, getCombinedShippingStatus, normalizeConfig, removeCombinedShippingDiscount,
+  defaultDiscountTitle, DISCOUNT_TITLES,
 };

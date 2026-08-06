@@ -114,6 +114,11 @@ Stand: Juli 2026 · App: **MyBridge** (`client_id 9193536353d7d304a0c2414989304f
   Neuinstallationen werden je Shop-Land vorkonfiguriert: US-Shops mit
   `config/shipping-rules.us.json` (USD, USPS/UPS/FedEx, US+CA-Zonen), alle
   anderen mit `config/shipping-rules.json` (EUR, DHL, DE/EU).
+  Die **Rabattzeile im Checkout** (kundensichtbar!) folgt dem Shop-Land statt
+  der Admin-Sprache — „Kombinierter Versand" für DE/AT/CH, „Combined shipping"
+  sonst — und ist in der App frei überschreibbar („Bezeichnung im Checkout"),
+  damit mehrsprachige Shops selbst entscheiden. Wird das Feld geändert, benennt
+  die App den bestehenden Rabatt per `discountAutomaticAppUpdate` um.
 - **Billing-Lifecycle:** Bei `app_subscriptions/update` mit Status
   `CANCELLED`/`DECLINED`/`EXPIRED`/`FROZEN` (Trial ohne Zahlung ausgelaufen,
   Zahlung fehlgeschlagen, Abo gekündigt) entfernt die App automatisch ihre
