@@ -24,7 +24,9 @@ router.post('/', async (req, res) => {
       // "Access denied for X field" = the shop's token predates a scope
       // addition — a fresh OAuth grant fixes it
       if (/access denied/i.test(result.error || '')) {
-        result.error += ' — Die App hat neue Berechtigungen bekommen. Bitte einmal neu autorisieren: /auth/begin?shop=' + req.shop;
+        result.errorCode = 'reauthorizeNeeded';
+        result.errorParams = { url: `/auth/begin?shop=${req.shop}` };
+        result.error += ` — The app was granted new permissions. Please re-authorize once: /auth/begin?shop=${req.shop}`;
       }
       logger.warn('Profile sync failed', { shop: req.shop, error: result.error });
       return res.status(422).json(result);

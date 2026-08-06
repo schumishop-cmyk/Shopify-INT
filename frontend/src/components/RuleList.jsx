@@ -6,7 +6,7 @@ import {
 import { useI18n } from '../i18n';
 
 export default function RuleList({ rules, loading, error, onEdit, onDelete, onToggle }) {
-  const { t, formatMoney, gramsToDisplay, weightLabel } = useI18n();
+  const { t, formatMoney, gramsToDisplay, weightLabel, translateError } = useI18n();
 
   const price = (cents) => (cents === 0 ? t('ruleList.free') : formatMoney(cents));
 
@@ -34,7 +34,7 @@ export default function RuleList({ rules, loading, error, onEdit, onDelete, onTo
 
   if (loading) return <Card><Spinner accessibilityLabel={t('ruleList.loading')} /></Card>;
 
-  if (error) return <Banner status="critical" title={t('ruleList.loadError')}>{error}</Banner>;
+  if (error) return <Banner status="critical" title={t('ruleList.loadError')}>{translateError(error)}</Banner>;
 
   if (rules.length === 0) {
     return (

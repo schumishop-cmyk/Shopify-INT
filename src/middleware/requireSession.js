@@ -40,11 +40,16 @@ async function requireSessionToken(req, res, next) {
     req.shopToken = await getValidToken(shop);
   } catch (err) {
     logger.warn('Access token unavailable', { shop, error: err.message });
-    return res.status(401).json({
-      error: err.needsReauth
-        ? 'Sitzung abgelaufen — bitte die App einmal neu öffnen bzw. autorisieren.'
-        : 'Zugriffstoken konnte nicht erneuert werden: ' + err.message,
-    });
+    return res.status(401).json(err.needsReauth
+      ? {
+        errorCode: 'sessionExpired',
+        error: 'Session expired — please reopen or re-authorize the app.',
+      }
+      : {
+        errorCode: 'tokenRefreshFailed',
+        errorParams: { error: err.message },
+        error: `Could not refresh the access token: ${err.message}`,
+      });
   }
 
   req.shop = shop;

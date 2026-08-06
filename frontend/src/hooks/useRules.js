@@ -21,9 +21,13 @@ async function api(path, { method = 'GET', body } = {}) {
     ...(body ? { body: JSON.stringify(body) } : {}),
   });
   if (!res.ok) {
-    let message = `HTTP ${res.status}`;
-    try { message = (await res.json()).error || message; } catch { /* keep default */ }
-    throw new Error(message);
+    let payload = {};
+    try { payload = await res.json(); } catch { /* non-JSON body */ }
+    const err = new Error(payload.error || `HTTP ${res.status}`);
+    // Carry the code so the UI can show a localized message (e.g. sessionExpired)
+    err.errorCode = payload.errorCode;
+    err.errorParams = payload.errorParams;
+    throw err;
   }
   return res.json();
 }
@@ -40,7 +44,7 @@ export function useRules() {
       const data = await api('/api/rules');
       setRules(data.rules || []);
     } catch (e) {
-      setError(e.message);
+      setError(e); // the Error carries errorCode/errorParams for localization
     } finally {
       setLoading(false);
     }

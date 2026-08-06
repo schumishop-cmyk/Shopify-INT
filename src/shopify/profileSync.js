@@ -126,7 +126,7 @@ function buildMethodDefinitions(rule, currencyCode, warnings) {
       weightConditions.push({ criteria: { unit: 'GRAMS', value: c.maxWeightGrams }, operator: 'LESS_THAN_OR_EQUAL_TO' });
     }
     if (hasPrice) {
-      warnings.push(`Regel "${rule.name}": Shopify-Raten können Gewichts- und Preisbedingungen nicht kombinieren — Preisbedingung wird ignoriert.`);
+      warnings.push({ code: 'weightAndPriceCombined', params: { rule: rule.name } });
     }
   } else if (hasPrice) {
     priceConditions = [];
@@ -163,7 +163,7 @@ function buildSyncPlan(rules, profile, trackedMethodDefIds = [], trackedZoneIds 
   const { currencyCode } = profile;
 
   if (profile.multipleLocationGroups) {
-    warnings.push('Der Shop hat mehrere Standort-Gruppen — es wird nur die erste synchronisiert.');
+    warnings.push({ code: 'multipleLocationGroups', params: {} });
   }
 
   // Delete only what WE created earlier (and still exists in the profile)
@@ -222,7 +222,10 @@ function buildSyncPlan(rules, profile, trackedMethodDefIds = [], trackedZoneIds 
         targetZoneIds.add(zone.id);
         const extra = zone.countryCodes.filter((cc) => !countries.includes(cc));
         if (extra.length > 0) {
-          warnings.push(`Regel "${rule.name}": Zone "${zone.name}" enthält weitere Länder (${extra.join(', ')}) — die Rate gilt dort ebenfalls.`);
+          warnings.push({
+            code: 'zoneHasExtraCountries',
+            params: { rule: rule.name, zone: zone.name, countries: extra.join(', ') },
+          });
         }
       } else if (plannedCountryIndex.has(code)) {
         plannedCountryIndex.get(code).methodDefinitionsToCreate.push(...defs.map(cloneDef));
@@ -305,7 +308,11 @@ async function syncShopProfile(shop, token, rules) {
 
   const profile = normalizeProfile(queryRes.data);
   if (!profile) {
-    return { ok: false, error: 'Kein Versandprofil gefunden — bitte in Shopify unter Einstellungen → Versand ein Profil anlegen.' };
+    return {
+      ok: false,
+      errorCode: 'noDeliveryProfile',
+      error: 'No delivery profile found — create one in Shopify under Settings → Shipping.',
+    };
   }
 
   const tracked = listTracked.all(shop);

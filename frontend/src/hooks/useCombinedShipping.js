@@ -11,6 +11,8 @@ async function authHeaders() {
 export function useCombinedShipping() {
   const [status, setStatus] = useState(null); // { deployed, active, config }
   const [saving, setSaving] = useState(false);
+  // Holds the whole failure payload ({ errorCode, errorParams, error }) so the
+  // UI can render a localized message rather than the server's English text
   const [error, setError] = useState(null);
 
   const refresh = useCallback(async () => {
@@ -33,13 +35,13 @@ export function useCombinedShipping() {
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error || 'Speichern fehlgeschlagen');
+        setError(data);
         return false;
       }
       await refresh();
       return true;
     } catch (e) {
-      setError(e.message);
+      setError({ error: e.message });
       return false;
     } finally {
       setSaving(false);

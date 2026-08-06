@@ -87,7 +87,7 @@ describe('buildSyncPlan', () => {
     const def = input.locationGroupsToUpdate[0].zonesToUpdate[0].methodDefinitionsToCreate[0];
     expect(def.weightConditionsToCreate).toBeDefined();
     expect(def.priceConditionsToCreate).toBeUndefined();
-    expect(warnings.some((w) => w.includes('Preisbedingung wird ignoriert'))).toBe(true);
+    expect(warnings.some((w) => w.code === 'weightAndPriceCombined')).toBe(true);
   });
 
   test('skips tag-based rules silently (handled by tagProfileSync)', () => {
@@ -127,7 +127,7 @@ describe('buildSyncPlan', () => {
       zones: [{ ...baseProfile.zones[0], countryCodes: ['DE', 'AT'], name: 'DACH' }],
     };
     const { warnings } = buildSyncPlan([rule()], profile);
-    expect(warnings.some((w) => w.includes('AT'))).toBe(true);
+    expect(warnings.some((w) => w.code === 'zoneHasExtraCountries' && w.params.countries.includes('AT'))).toBe(true);
   });
 });
 

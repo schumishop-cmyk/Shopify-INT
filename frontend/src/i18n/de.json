@@ -105,6 +105,28 @@
     "flatAmount": "Pauschale pro zusätzlichem Standort ({currency})",
     "flatAmountHelp": "Beispiel: {example} — der Kunde zahlt die teuerste Rate voll, jeder weitere Standort kostet pauschal diesen Betrag."
   },
+  "warnings": {
+    "weightAndPriceCombined": "Regel „{rule}\": Shopify-Raten können Gewichts- und Preisbedingungen nicht kombinieren — die Preisbedingung wird ignoriert.",
+    "multipleLocationGroups": "Der Shop hat mehrere Standort-Gruppen — es wird nur die erste synchronisiert.",
+    "zoneHasExtraCountries": "Regel „{rule}\": Zone „{zone}\" enthält weitere Länder ({countries}) — die Rate gilt dort ebenfalls.",
+    "tooManyProducts": "Regel „{rule}\": mehr als {limit} Produkte mit diesem Tag — nur die ersten wurden zugeordnet.",
+    "noProductsWithTag": "Regel „{rule}\": kein Produkt trägt eines der Tags {tags} — Profil wird nicht angelegt.",
+    "excludeTagsUnsupported": "Regel „{rule}\": Ausschluss-Tags werden bei Profil-Regeln nicht unterstützt und ignoriert.",
+    "tagProfileSyncFailed": "Regel „{rule}\": Profil-Sync fehlgeschlagen — {error}",
+    "staleTagProfileNotRemoved": "Veraltetes Tag-Profil konnte nicht entfernt werden ({error}).",
+    "tagProfileNotRemoved": "Tag-Profil konnte nicht entfernt werden ({error})."
+  },
+  "errors": {
+    "noDeliveryProfile": "Kein Versandprofil gefunden — bitte in Shopify unter Einstellungen → Versand ein Profil anlegen.",
+    "invalidFlatAmount": "Ungültiger Pauschalbetrag",
+    "vendorRequired": "Bitte den Vendor des Fulfillment-Partners angeben (z.B. „Spreadconnect\").",
+    "fulfillmentRateRequired": "Bitte die Versandrate des Fulfillment-Partners angeben (z.B. 3.50).",
+    "flatAmountTooHigh": "Die Pauschale muss kleiner sein als die Versandrate des Partners — sonst gibt es nichts zu rabattieren.",
+    "needsDeploy": "Die Versand-Function ist noch nicht deployt. Bitte einmalig `shopify app deploy` im Projekt ausführen.",
+    "reauthorizeNeeded": "Die App hat neue Berechtigungen bekommen. Bitte einmal neu autorisieren: {url}",
+    "sessionExpired": "Sitzung abgelaufen — bitte die App einmal neu öffnen bzw. autorisieren.",
+    "tokenRefreshFailed": "Zugriffstoken konnte nicht erneuert werden: {error}"
+  },
   "billing": {
     "activeTitle": "Abo aktiv",
     "activeBody": "Aktiver Plan: {plan}. Alle Funktionen sind freigeschaltet.",

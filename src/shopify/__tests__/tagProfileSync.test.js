@@ -105,7 +105,7 @@ describe('syncTagProfiles', () => {
 
     expect(res.removed).toBe(1);
     expect(res.created).toBe(0);
-    expect(res.warnings.some((w) => w.includes('kein Produkt'))).toBe(true);
+    expect(res.warnings.some((w) => w.code === 'noProductsWithTag')).toBe(true);
   });
 
   test('updates an existing profile: replaces rates, diffs variants', async () => {
@@ -164,7 +164,7 @@ describe('syncTagProfiles', () => {
     mockGraphql.mockResolvedValueOnce({ errors: [{ message: 'boom' }] });
     const res = await syncTagProfiles(SHOP, TOKEN, [sperrgutRule()], CTX);
     expect(res.created).toBe(0);
-    expect(res.warnings.some((w) => w.includes('boom'))).toBe(true);
+    expect(res.warnings.some((w) => w.code === 'tagProfileSyncFailed' && w.params.error === 'boom')).toBe(true);
   });
 
   test('ignores rules without tags', async () => {
@@ -212,6 +212,6 @@ describe('removeAllTagProfiles', () => {
 
     expect(res.ok).toBe(false);
     expect(res.removed).toBe(1);
-    expect(res.warnings[0]).toMatch(/boom/);
+    expect(res.warnings[0]).toEqual({ code: 'tagProfileNotRemoved', params: { error: 'boom' } });
   });
 });

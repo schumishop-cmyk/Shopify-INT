@@ -78,10 +78,39 @@ export function I18nProvider({ locale, currencyCode = 'EUR', weightUnit = 'GRAMS
 
     const gramsPerUnit = GRAMS_PER_UNIT[weightUnit] || 1;
 
+    /**
+     * Renders a backend warning. The API sends { code, params } so the message
+     * can be localized here; plain strings are passed through so an older
+     * server (or an unexpected shape) still shows something useful.
+     */
+    const translateWarning = (warning) => {
+      if (typeof warning === 'string') return warning;
+      if (!warning?.code) return String(warning ?? '');
+      return t(`warnings.${warning.code}`, warning.params || {});
+    };
+
+    /**
+     * Renders a backend error. Prefers the localized text for `errorCode` and
+     * falls back to the English `error` string the API always includes.
+     */
+    const translateError = (result) => {
+      if (!result) return '';
+      if (typeof result === 'string') return result;
+      const { errorCode, errorParams } = result;
+      // API responses carry `error`; thrown Errors carry `message`
+      const error = result.error || result.message;
+      if (!errorCode) return error || '';
+      const localized = t(`errors.${errorCode}`, errorParams || {});
+      // t() echoes the key back when it's missing — fall back to the server text
+      return localized === `errors.${errorCode}` ? (error || localized) : localized;
+    };
+
     return {
       locale: resolved,
       polarisI18n: POLARIS_LOCALES[resolved] || POLARIS_LOCALES[DEFAULT_LOCALE],
       t,
+      translateWarning,
+      translateError,
       currencyCode,
       weightUnit,
       /** Currency symbol/code for inline use in field labels. */

@@ -12,7 +12,7 @@ import { useBilling } from './hooks/useBilling';
 import { useI18n } from './i18n';
 
 export default function App() {
-  const { t } = useI18n();
+  const { t, translateError } = useI18n();
   const { rules, loading, error, createRule, updateRule, deleteRule, toggleRule } = useRules();
   const { lastSyncedAt, syncing, result, sync } = useSync();
   const combined = useCombinedShipping();
@@ -47,26 +47,26 @@ export default function App() {
       }
       setModalOpen(false);
     } catch (e) {
-      showToast(e.message, true);
+      showToast(translateError(e), true);
     }
-  }, [editingRule, createRule, updateRule, showToast, t]);
+  }, [editingRule, createRule, updateRule, showToast, t, translateError]);
 
   const handleDelete = useCallback(async (rule) => {
     try {
       await deleteRule(rule.id);
       showToast(t('app.toast.ruleDeleted'));
     } catch (e) {
-      showToast(e.message, true);
+      showToast(translateError(e), true);
     }
-  }, [deleteRule, showToast, t]);
+  }, [deleteRule, showToast, t, translateError]);
 
   const handleToggle = useCallback(async (rule) => {
     try {
       await toggleRule(rule.id);
     } catch (e) {
-      showToast(e.message, true);
+      showToast(translateError(e), true);
     }
-  }, [toggleRule, showToast]);
+  }, [toggleRule, showToast, translateError]);
 
   return (
     <Frame>

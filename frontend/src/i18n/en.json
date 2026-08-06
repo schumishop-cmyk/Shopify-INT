@@ -105,6 +105,28 @@
     "flatAmount": "Flat fee per extra location ({currency})",
     "flatAmountHelp": "Example: {example} — the customer pays the highest rate in full, and each extra location adds this flat amount."
   },
+  "warnings": {
+    "weightAndPriceCombined": "Rule \"{rule}\": Shopify rates can't combine weight and price conditions — the price condition was ignored.",
+    "multipleLocationGroups": "This shop has multiple location groups — only the first one is synced.",
+    "zoneHasExtraCountries": "Rule \"{rule}\": zone \"{zone}\" also contains {countries} — the rate applies there too.",
+    "tooManyProducts": "Rule \"{rule}\": more than {limit} products carry this tag — only the first ones were assigned.",
+    "noProductsWithTag": "Rule \"{rule}\": no product carries any of the tags {tags} — no profile was created.",
+    "excludeTagsUnsupported": "Rule \"{rule}\": exclusion tags aren't supported for profile rules and were ignored.",
+    "tagProfileSyncFailed": "Rule \"{rule}\": profile sync failed — {error}",
+    "staleTagProfileNotRemoved": "A stale tag profile could not be removed ({error}).",
+    "tagProfileNotRemoved": "A tag profile could not be removed ({error})."
+  },
+  "errors": {
+    "noDeliveryProfile": "No delivery profile found — create one in Shopify under Settings → Shipping.",
+    "invalidFlatAmount": "Invalid flat amount",
+    "vendorRequired": "Enter the fulfillment partner's vendor name (e.g. \"Printful\").",
+    "fulfillmentRateRequired": "Enter the fulfillment partner's shipping rate (e.g. 3.50).",
+    "flatAmountTooHigh": "The flat fee must be lower than the partner's shipping rate — otherwise there is nothing to discount.",
+    "needsDeploy": "The shipping function is not deployed yet. Run `shopify app deploy` once in the project.",
+    "reauthorizeNeeded": "The app was granted new permissions. Please re-authorize once: {url}",
+    "sessionExpired": "Session expired — please reopen or re-authorize the app.",
+    "tokenRefreshFailed": "Could not refresh the access token: {error}"
+  },
   "billing": {
     "activeTitle": "Subscription active",
     "activeBody": "Active plan: {plan}. All features are unlocked.",

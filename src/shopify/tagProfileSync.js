@@ -134,7 +134,10 @@ async function findVariantIdsByTags(shop, token, tags, warnings, ruleName) {
     after = conn.pageInfo.endCursor;
   }
 
-  warnings.push(`Regel "${ruleName}": mehr als ${MAX_PRODUCT_PAGES * 50} Produkte mit diesem Tag — nur die ersten wurden zugeordnet.`);
+  warnings.push({
+    code: 'tooManyProducts',
+    params: { rule: ruleName, limit: MAX_PRODUCT_PAGES * 50 },
+  });
   return variantIds;
 }
 
@@ -253,7 +256,10 @@ async function syncTagProfiles(shop, token, rules, { locationIds, currencyCode }
       tracked.delete(rule.rule_id); // whatever remains afterwards is stale
 
       if (variantIds.length === 0) {
-        warnings.push(`Regel "${rule.name}": kein Produkt trägt eines der Tags ${rule.conditions.requireProductTags.join(', ')} — Profil wird nicht angelegt.`);
+        warnings.push({
+          code: 'noProductsWithTag',
+          params: { rule: rule.name, tags: rule.conditions.requireProductTags.join(', ') },
+        });
         if (existingGid) {
           await removeTagProfile(shop, token, existingGid);
           untrackProfile.run(shop, existingGid);
@@ -263,7 +269,7 @@ async function syncTagProfiles(shop, token, rules, { locationIds, currencyCode }
       }
 
       if (rule.conditions.excludeProductTags?.length) {
-        warnings.push(`Regel "${rule.name}": Ausschluss-Tags werden bei Profil-Regeln nicht unterstützt und ignoriert.`);
+        warnings.push({ code: 'excludeTagsUnsupported', params: { rule: rule.name } });
       }
 
       const defs = buildMethodDefinitions(rule, currencyCode, warnings);
@@ -286,7 +292,10 @@ async function syncTagProfiles(shop, token, rules, { locationIds, currencyCode }
       }
     } catch (err) {
       logger.warn('Tag profile sync failed for rule', { shop, rule: rule.rule_id, error: err.message });
-      warnings.push(`Regel "${rule.name}": Profil-Sync fehlgeschlagen — ${err.message}`);
+      warnings.push({
+        code: 'tagProfileSyncFailed',
+        params: { rule: rule.name, error: err.message },
+      });
     }
   }
 
@@ -298,7 +307,7 @@ async function syncTagProfiles(shop, token, rules, { locationIds, currencyCode }
       removed++;
       logger.info('Stale tag profile removed', { shop, ruleId, gid });
     } catch (err) {
-      warnings.push(`Veraltetes Tag-Profil konnte nicht entfernt werden (${err.message}).`);
+      warnings.push({ code: 'staleTagProfileNotRemoved', params: { error: err.message } });
     }
   }
 
@@ -321,7 +330,7 @@ async function removeAllTagProfiles(shop, token) {
       untrackProfile.run(shop, gid);
       removed++;
     } catch (err) {
-      warnings.push(`Tag-Profil konnte nicht entfernt werden (${err.message}).`);
+      warnings.push({ code: 'tagProfileNotRemoved', params: { error: err.message } });
     }
   }
 

@@ -71,7 +71,7 @@ function normalizeConfig(body) {
   if (mode === 'flat_addition') {
     const cents = Math.round(parseFloat(body.flatAmount ?? 0) * 100);
     if (Number.isNaN(cents) || cents < 0) {
-      return { error: 'Ungültiger Pauschalbetrag' };
+      return { errorCode: 'invalidFlatAmount', error: 'Invalid flat amount' };
     }
     config.flatAmountCents = cents;
   }
@@ -83,13 +83,16 @@ function normalizeConfig(body) {
 
   if (config.enabled) {
     if (!vendor) {
-      return { error: 'Bitte den Vendor des Fulfillment-Partners angeben (z.B. "Spreadconnect")' };
+      return { errorCode: 'vendorRequired', error: 'Enter the fulfillment partner\'s vendor name' };
     }
     if (Number.isNaN(rateCents) || rateCents <= 0) {
-      return { error: 'Bitte die Versandrate des Fulfillment-Partners angeben (z.B. 3.50)' };
+      return { errorCode: 'fulfillmentRateRequired', error: 'Enter the fulfillment partner\'s shipping rate' };
     }
     if (mode === 'flat_addition' && config.flatAmountCents >= rateCents) {
-      return { error: 'Die Pauschale muss kleiner sein als die Versandrate des Partners — sonst gibt es nichts zu rabattieren' };
+      return {
+        errorCode: 'flatAmountTooHigh',
+        error: 'The flat fee must be lower than the partner\'s shipping rate — otherwise there is nothing to discount',
+      };
     }
   }
 
@@ -122,7 +125,8 @@ async function writeConfigMetafield(shop, token, discountGid, config) {
   if (errors.length) throw new Error(errors.map((e) => e.message).join('; '));
 }
 
-const NEEDS_DEPLOY_ERROR = 'Die Versand-Function ist noch nicht deployt. Bitte einmalig `shopify app deploy` im Projekt ausführen (siehe extensions/combined-shipping/README.md).';
+// English fallback text; the admin UI renders the localized version of the code
+const NEEDS_DEPLOY_ERROR = 'The shipping function is not deployed yet. Run `shopify app deploy` once (see extensions/combined-shipping/README.md).';
 
 /** Creates the automatic app discount and returns its GID (throws on userErrors). */
 async function createDiscount(shop, token) {
@@ -151,8 +155,8 @@ async function createDiscount(shop, token) {
  * Returns { ok, active, config } or { ok: false, error, needsDeploy? }.
  */
 async function applyCombinedShipping(shop, token, body) {
-  const { config, error } = normalizeConfig(body);
-  if (error) return { ok: false, error };
+  const { config, error, errorCode } = normalizeConfig(body);
+  if (error) return { ok: false, error, errorCode };
 
   const state = readState.get(shop);
   let discountGid = state?.combined_discount_gid;
@@ -161,7 +165,7 @@ async function applyCombinedShipping(shop, token, body) {
   try {
     if (!discountGid) {
       if (!(await isFunctionDeployed(shop, token))) {
-        return { ok: false, needsDeploy: true, error: NEEDS_DEPLOY_ERROR };
+        return { ok: false, needsDeploy: true, errorCode: 'needsDeploy', error: NEEDS_DEPLOY_ERROR };
       }
       discountGid = await createDiscount(shop, token);
       freshlyCreated = true;
@@ -177,7 +181,7 @@ async function applyCombinedShipping(shop, token, body) {
       if (!freshlyCreated && /owner does not exist/i.test(err.message)) {
         logger.warn('Stored combined-shipping discount is stale; recreating', { shop, staleGid: discountGid });
         if (!(await isFunctionDeployed(shop, token))) {
-          return { ok: false, needsDeploy: true, error: NEEDS_DEPLOY_ERROR };
+          return { ok: false, needsDeploy: true, errorCode: 'needsDeploy', error: NEEDS_DEPLOY_ERROR };
         }
         discountGid = await createDiscount(shop, token);
         await writeConfigMetafield(shop, token, discountGid, config);

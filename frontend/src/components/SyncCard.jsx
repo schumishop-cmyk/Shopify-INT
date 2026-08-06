@@ -7,7 +7,7 @@ import { useI18n } from '../i18n';
  * shop's native delivery profile — this card drives that sync.
  */
 export default function SyncCard({ lastSyncedAt, syncing, result, onSync }) {
-  const { t, formatDateTime } = useI18n();
+  const { t, formatDateTime, translateWarning, translateError } = useI18n();
   const synced = formatDateTime(lastSyncedAt);
 
   return (
@@ -29,7 +29,7 @@ export default function SyncCard({ lastSyncedAt, syncing, result, onSync }) {
 
         {result && !result.ok && (
           <Banner tone="critical" title={t('sync.failed')}>
-            <p>{result.error}</p>
+            <p>{translateError(result)}</p>
           </Banner>
         )}
 
@@ -47,7 +47,9 @@ export default function SyncCard({ lastSyncedAt, syncing, result, onSync }) {
               )}
               {result.warnings?.length > 0 && (
                 <List type="bullet">
-                  {result.warnings.map((w, i) => <List.Item key={i}>{w}</List.Item>)}
+                  {result.warnings.map((w, i) => (
+                    <List.Item key={i}>{translateWarning(w)}</List.Item>
+                  ))}
                 </List>
               )}
             </BlockStack>

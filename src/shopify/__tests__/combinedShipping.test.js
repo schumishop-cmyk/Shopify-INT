@@ -44,15 +44,15 @@ describe('normalizeConfig', () => {
   });
 
   test('requires a vendor when enabled', () => {
-    expect(normalizeConfig({ ...BODY, detectVendor: ' ' }).error).toMatch(/Vendor/);
+    expect(normalizeConfig({ ...BODY, detectVendor: ' ' }).errorCode).toBe('vendorRequired');
   });
 
   test('requires a positive fulfillment rate when enabled', () => {
-    expect(normalizeConfig({ ...BODY, fulfillmentRate: '0' }).error).toMatch(/Versandrate/);
+    expect(normalizeConfig({ ...BODY, fulfillmentRate: '0' }).errorCode).toBe('fulfillmentRateRequired');
   });
 
   test('rejects a flat fee that is not below the partner rate', () => {
-    expect(normalizeConfig({ ...BODY, flatAmount: '3.50' }).error).toMatch(/Pauschale/);
+    expect(normalizeConfig({ ...BODY, flatAmount: '3.50' }).errorCode).toBe('flatAmountTooHigh');
   });
 
   test('skips validation when disabled', () => {

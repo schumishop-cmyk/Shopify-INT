@@ -12,7 +12,7 @@ import { useI18n } from '../i18n';
  * that into "pay only the highest rate" or "flat fee per extra origin".
  */
 export default function CombinedShippingCard({ status, saving, error, onSave }) {
-  const { t, formatMoney, currencySymbol } = useI18n();
+  const { t, formatMoney, currencySymbol, translateError } = useI18n();
   const [enabled, setEnabled] = useState(false);
   const [mode, setMode] = useState('highest_only');
   const [flatAmount, setFlatAmount] = useState('3.00');
@@ -74,7 +74,9 @@ export default function CombinedShippingCard({ status, saving, error, onSave }) 
         )}
 
         {error && (
-          <Banner tone="critical" title={t('combined.saveFailed')}><p>{error}</p></Banner>
+          <Banner tone="critical" title={t('combined.saveFailed')}>
+            <p>{translateError(error)}</p>
+          </Banner>
         )}
 
         <Checkbox
