@@ -1,55 +1,48 @@
 import React from 'react';
 import { Card, BlockStack, InlineStack, Text, Button, Banner, List } from '@shopify/polaris';
-
-function formatTime(iso) {
-  if (!iso) return null;
-  // SQLite datetime('now') is UTC without timezone marker
-  const date = new Date(iso.includes('T') ? iso : iso.replace(' ', 'T') + 'Z');
-  return date.toLocaleString('de-DE', { dateStyle: 'medium', timeStyle: 'short' });
-}
+import { useI18n } from '../i18n';
 
 /**
  * Rules only take effect at checkout after they've been compiled into the
  * shop's native delivery profile — this card drives that sync.
  */
 export default function SyncCard({ lastSyncedAt, syncing, result, onSync }) {
-  const synced = formatTime(lastSyncedAt);
+  const { t, formatDateTime } = useI18n();
+  const synced = formatDateTime(lastSyncedAt);
 
   return (
     <Card>
       <BlockStack gap="300">
         <InlineStack align="space-between" blockAlign="center">
           <BlockStack gap="100">
-            <Text variant="headingSm" as="h2">Mit Shopify-Versandeinstellungen synchronisieren</Text>
+            <Text variant="headingSm" as="h2">{t('sync.heading')}</Text>
             <Text tone="subdued" as="p">
-              {synced
-                ? `Zuletzt synchronisiert: ${synced}`
-                : 'Noch nie synchronisiert — die Regeln greifen erst nach der ersten Synchronisierung.'}
+              {synced ? t('sync.lastSynced', { time: synced }) : t('sync.never')}
             </Text>
           </BlockStack>
           <Button variant="primary" onClick={onSync} loading={syncing}>
-            Synchronisieren
+            {t('sync.button')}
           </Button>
         </InlineStack>
 
-        <Text tone="subdued" variant="bodySm" as="p">
-          Deine Regeln werden als Versandtarife in dein Shopify-Versandprofil geschrieben
-          (Einstellungen → Versand und Lieferung). Nach jeder Regeländerung erneut synchronisieren.
-        </Text>
+        <Text tone="subdued" variant="bodySm" as="p">{t('sync.explanation')}</Text>
 
         {result && !result.ok && (
-          <Banner tone="critical" title="Synchronisierung fehlgeschlagen">
+          <Banner tone="critical" title={t('sync.failed')}>
             <p>{result.error}</p>
           </Banner>
         )}
 
         {result?.ok && (
-          <Banner tone="success" title={`${result.createdRates} Versandtarife angelegt`}>
+          <Banner tone="success" title={t('sync.createdRates', { count: result.createdRates })}>
             <BlockStack gap="150">
               {result.tagProfiles && (result.tagProfiles.created + result.tagProfiles.updated + result.tagProfiles.removed) > 0 && (
                 <Text as="p">
-                  Tag-Regeln: {result.tagProfiles.created} Versandprofil(e) angelegt,{' '}
-                  {result.tagProfiles.updated} aktualisiert, {result.tagProfiles.removed} entfernt.
+                  {t('sync.tagProfiles', {
+                    created: result.tagProfiles.created,
+                    updated: result.tagProfiles.updated,
+                    removed: result.tagProfiles.removed,
+                  })}
                 </Text>
               )}
               {result.warnings?.length > 0 && (

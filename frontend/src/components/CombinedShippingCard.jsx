@@ -3,6 +3,7 @@ import {
   Card, BlockStack, InlineStack, Text, Button, Banner,
   Checkbox, Select, TextField, Badge,
 } from '@shopify/polaris';
+import { useI18n } from '../i18n';
 
 /**
  * Configures combined shipping for multi-origin orders: when a cart ships
@@ -11,10 +12,11 @@ import {
  * that into "pay only the highest rate" or "flat fee per extra origin".
  */
 export default function CombinedShippingCard({ status, saving, error, onSave }) {
+  const { t, formatMoney, currencySymbol } = useI18n();
   const [enabled, setEnabled] = useState(false);
   const [mode, setMode] = useState('highest_only');
   const [flatAmount, setFlatAmount] = useState('3.00');
-  const [detectVendor, setDetectVendor] = useState('Spreadconnect');
+  const [detectVendor, setDetectVendor] = useState('');
   const [fulfillmentRate, setFulfillmentRate] = useState('3.50');
 
   useEffect(() => {
@@ -40,8 +42,10 @@ export default function CombinedShippingCard({ status, saving, error, onSave }) 
       <BlockStack gap="300">
         <InlineStack align="space-between" blockAlign="center">
           <InlineStack gap="200" blockAlign="center">
-            <Text variant="headingSm" as="h2">Kombinierte Versandkosten (mehrere Standorte)</Text>
-            {status?.active && status?.config?.enabled !== false && <Badge tone="success">Aktiv</Badge>}
+            <Text variant="headingSm" as="h2">{t('combined.heading')}</Text>
+            {status?.active && status?.config?.enabled !== false && (
+              <Badge tone="success">{t('combined.active')}</Badge>
+            )}
           </InlineStack>
           <Button
             variant="primary"
@@ -49,20 +53,16 @@ export default function CombinedShippingCard({ status, saving, error, onSave }) 
             loading={saving}
             disabled={needsDeploy}
           >
-            Speichern
+            {t('combined.save')}
           </Button>
         </InlineStack>
 
-        <Text tone="subdued" as="p">
-          Wenn eine Bestellung aus mehreren Standorten verschickt wird (z.B. eigenes Lager +
-          Fulfillment-Dienstleister), addiert Shopify normalerweise die Versandkosten beider
-          Standorte. Hier legst du fest, was der Kunde stattdessen zahlt.
-        </Text>
+        <Text tone="subdued" as="p">{t('combined.explanation')}</Text>
 
         {needsDeploy && (
-          <Banner tone="warning" title="Function noch nicht deployt">
+          <Banner tone="warning" title={t('combined.needsDeployTitle')}>
             <p>
-              Die Checkout-Function muss einmalig mit der Shopify CLI deployt werden:
+              {t('combined.needsDeployBody')}
               <br /><code>npm install -g @shopify/cli</code>
               <br /><code>cd extensions/combined-shipping</code>
               <br /><code>npm install</code>
@@ -74,39 +74,39 @@ export default function CombinedShippingCard({ status, saving, error, onSave }) 
         )}
 
         {error && (
-          <Banner tone="critical" title="Speichern fehlgeschlagen"><p>{error}</p></Banner>
+          <Banner tone="critical" title={t('combined.saveFailed')}><p>{error}</p></Banner>
         )}
 
         <Checkbox
-          label="Kombinierte Versandkosten aktivieren"
+          label={t('combined.enable')}
           checked={enabled}
           onChange={setEnabled}
         />
 
         <TextField
-          label="Vendor des Fulfillment-Partners"
+          label={t('combined.vendor')}
           value={detectVendor}
           onChange={setDetectVendor}
           autoComplete="off"
           disabled={!enabled}
-          helpText="Daran erkennt die App gemischte Bestellungen: der Anbieter-/Vendor-Name der Fulfillment-Produkte (bei Spreadconnect/SPOD steht auf der Produktseite unter Anbieter: Spreadconnect)."
+          helpText={t('combined.vendorHelp')}
         />
 
         <TextField
-          label="Versandrate des Fulfillment-Partners (€)"
+          label={t('combined.partnerRate', { currency: currencySymbol })}
           type="number"
           value={fulfillmentRate}
           onChange={setFulfillmentRate}
           autoComplete="off"
           disabled={!enabled}
-          helpText="Was der Partner pro Sendung berechnet (z.B. 3.50). Um diesen Betrag — abzüglich einer eventuellen Pauschale — werden gemischte Bestellungen rabattiert."
+          helpText={t('combined.partnerRateHelp', { example: formatMoney(350) })}
         />
 
         <Select
-          label="Berechnungsmodus"
+          label={t('combined.mode')}
           options={[
-            { label: 'Nur die teuerste Rate zahlen (weitere Standorte kostenlos)', value: 'highest_only' },
-            { label: 'Pauschale pro zusätzlichem Standort', value: 'flat_addition' },
+            { label: t('combined.modeHighestOnly'), value: 'highest_only' },
+            { label: t('combined.modeFlatAddition'), value: 'flat_addition' },
           ]}
           value={mode}
           onChange={setMode}
@@ -115,13 +115,13 @@ export default function CombinedShippingCard({ status, saving, error, onSave }) 
 
         {mode === 'flat_addition' && (
           <TextField
-            label="Pauschale pro zusätzlichem Standort (€)"
+            label={t('combined.flatAmount', { currency: currencySymbol })}
             type="number"
             value={flatAmount}
             onChange={setFlatAmount}
             autoComplete="off"
             disabled={!enabled}
-            helpText="Beispiel: 3.00 — der Kunde zahlt die teuerste Rate voll, jeder weitere Standort kostet pauschal diesen Betrag."
+            helpText={t('combined.flatAmountHelp', { example: formatMoney(300) })}
           />
         )}
       </BlockStack>

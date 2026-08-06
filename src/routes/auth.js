@@ -3,6 +3,7 @@ const crypto = require('crypto');
 const { upsertShop } = require('../db/shops');
 const { seedDefaultRules } = require('../db/rules');
 const { registerUninstallWebhook, registerSubscriptionWebhook } = require('../shopify/webhookRegistration');
+const { getShopContext } = require('../shopify/shopContext');
 const {
   isValidShop, publicBaseUrl, buildAuthorizeUrl, verifyCallbackHmac, exchangeCode,
 } = require('../shopify/oauth');
@@ -77,7 +78,16 @@ router.get('/auth/callback', async (req, res) => {
         ? new Date(now + tokens.refresh_token_expires_in * 1000).toISOString() : null,
     });
 
-    seedDefaultRules(shop);
+    // The shop's country decides which starter rule set it gets (a US shop
+    // shouldn't begin with EUR prices and DHL services). Best-effort: if the
+    // lookup fails we seed the default set rather than block the install.
+    let countryCode = null;
+    try {
+      ({ countryCode } = await getShopContext(shop, tokens.access_token));
+    } catch (err) {
+      logger.warn('Shop country lookup failed — seeding default rules', { shop, error: err.message });
+    }
+    seedDefaultRules(shop, countryCode);
     // Legacy install flow can't declare webhooks in the TOML — subscribe
     // app/uninstalled here so we can clean up on removal, and
     // app_subscriptions/update so we can tear down live shipping data when

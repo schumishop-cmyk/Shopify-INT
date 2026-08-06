@@ -105,6 +105,15 @@ Stand: Juli 2026 · App: **MyBridge** (`client_id 9193536353d7d304a0c2414989304f
   Standort-IDs des Shops als Versandursprünge.
 - **Warum `write_discounts`?** Der kombinierte Versand läuft über einen
   automatischen App-Rabatt (Shipping-Discount-Function).
+- **Sprachen & Märkte:** Die Admin-UI ist mehrsprachig (Deutsch/Englisch) und
+  richtet sich nach dem `locale`-Parameter, den Shopify beim Öffnen der App
+  mitgibt; unbekannte Sprachen fallen auf Englisch zurück
+  (`frontend/src/i18n/`). Währung und Gewichtseinheit kommen unabhängig davon
+  aus den Shop-Einstellungen (`/api/shop-context` → `Shop.currencyCode`,
+  `Shop.weightUnit`), damit ein US-Shop `$` und `lb` sieht statt `€`/`g`.
+  Neuinstallationen werden je Shop-Land vorkonfiguriert: US-Shops mit
+  `config/shipping-rules.us.json` (USD, USPS/UPS/FedEx, US+CA-Zonen), alle
+  anderen mit `config/shipping-rules.json` (EUR, DHL, DE/EU).
 - **Billing-Lifecycle:** Bei `app_subscriptions/update` mit Status
   `CANCELLED`/`DECLINED`/`EXPIRED`/`FROZEN` (Trial ohne Zahlung ausgelaufen,
   Zahlung fehlgeschlagen, Abo gekündigt) entfernt die App automatisch ihre

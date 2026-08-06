@@ -200,7 +200,10 @@ function buildSyncPlan(rules, profile, trackedMethodDefIds = [], trackedZoneIds 
       } else {
         let rowZone = plannedZones.find((z) => z.restOfWorld);
         if (!rowZone) {
-          rowZone = { name: 'App: Rest der Welt', restOfWorld: true, countries: [{ restOfWorld: true }], methodDefinitionsToCreate: [] };
+          // English on purpose: this name is written into the merchant's
+          // Shopify shipping settings, where Shopify's own equivalent zone is
+          // also called "Rest of world"
+          rowZone = { name: 'App: Rest of world', restOfWorld: true, countries: [{ restOfWorld: true }], methodDefinitionsToCreate: [] };
           plannedZones.push(rowZone);
         }
         rowZone.methodDefinitionsToCreate.push(...defs);

@@ -9,8 +9,10 @@ import { useRules } from './hooks/useRules';
 import { useSync } from './hooks/useSync';
 import { useCombinedShipping } from './hooks/useCombinedShipping';
 import { useBilling } from './hooks/useBilling';
+import { useI18n } from './i18n';
 
 export default function App() {
+  const { t } = useI18n();
   const { rules, loading, error, createRule, updateRule, deleteRule, toggleRule } = useRules();
   const { lastSyncedAt, syncing, result, sync } = useSync();
   const combined = useCombinedShipping();
@@ -38,25 +40,25 @@ export default function App() {
     try {
       if (editingRule) {
         await updateRule(editingRule.id, data);
-        showToast('Regel aktualisiert');
+        showToast(t('app.toast.ruleUpdated'));
       } else {
         await createRule(data);
-        showToast('Regel erstellt');
+        showToast(t('app.toast.ruleCreated'));
       }
       setModalOpen(false);
     } catch (e) {
       showToast(e.message, true);
     }
-  }, [editingRule, createRule, updateRule, showToast]);
+  }, [editingRule, createRule, updateRule, showToast, t]);
 
   const handleDelete = useCallback(async (rule) => {
     try {
       await deleteRule(rule.id);
-      showToast('Regel gelöscht');
+      showToast(t('app.toast.ruleDeleted'));
     } catch (e) {
       showToast(e.message, true);
     }
-  }, [deleteRule, showToast]);
+  }, [deleteRule, showToast, t]);
 
   const handleToggle = useCallback(async (rule) => {
     try {
@@ -69,9 +71,9 @@ export default function App() {
   return (
     <Frame>
       <Page
-        title="Versandregeln"
-        subtitle="Definiere dynamische Versandkosten für deinen Shop"
-        primaryAction={{ content: 'Neue Regel', onAction: handleCreate }}
+        title={t('app.title')}
+        subtitle={t('app.subtitle')}
+        primaryAction={{ content: t('app.newRule'), onAction: handleCreate }}
       >
         <Layout>
           <Layout.Section>
@@ -89,7 +91,7 @@ export default function App() {
               result={result}
               onSync={async () => {
                 const res = await sync();
-                showToast(res.ok ? 'Versandtarife synchronisiert' : 'Synchronisierung fehlgeschlagen', !res.ok);
+                showToast(res.ok ? t('app.toast.synced') : t('app.toast.syncFailed'), !res.ok);
               }}
             />
           </Layout.Section>
@@ -100,7 +102,7 @@ export default function App() {
               error={combined.error}
               onSave={async (body) => {
                 const ok = await combined.save(body);
-                showToast(ok ? 'Kombinierte Versandkosten gespeichert' : 'Speichern fehlgeschlagen', !ok);
+                showToast(ok ? t('app.toast.combinedSaved') : t('app.toast.saveFailed'), !ok);
               }}
             />
           </Layout.Section>

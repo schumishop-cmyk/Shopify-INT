@@ -149,7 +149,9 @@ function buildTagZones(rule, defs) {
     }];
   }
   return [{
-    name: `App: ${rule.name} (weltweit)`,
+    // English suffix on purpose — this name shows up in the merchant's Shopify
+    // shipping settings alongside Shopify's own "Rest of world" zone
+    name: `App: ${rule.name} (worldwide)`,
     countries: [{ restOfWorld: true }],
     methodDefinitionsToCreate: defs,
   }];

@@ -8,6 +8,7 @@ const rulesRouter = require('./routes/api/rules');
 const syncRouter = require('./routes/api/sync');
 const combinedShippingRouter = require('./routes/api/combinedShipping');
 const billingRouter = require('./routes/api/billing');
+const shopContextRouter = require('./routes/api/shopContext');
 const legalRouter = require('./routes/legal');
 const { getShop } = require('./db/shops');
 const { isValidShop, publicBaseUrl } = require('./shopify/oauth');
@@ -51,6 +52,9 @@ app.use('/api/combined-shipping', combinedShippingRouter);
 
 // Managed Pricing: subscription status + hosted plan-selection URL
 app.use('/api/billing', billingRouter);
+
+// Shop currency + weight unit, so the UI formats values the merchant's way
+app.use('/api/shop-context', shopContextRouter);
 
 // Legal pages (privacy policy, terms — required for App Store)
 app.use(legalRouter);
