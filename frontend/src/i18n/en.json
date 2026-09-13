@@ -81,7 +81,7 @@
     "lastSynced": "Last synced: {time}",
     "never": "Never synced — rules only take effect after the first sync.",
     "button": "Synchronize",
-    "explanation": "Your rules are written into your Shopify delivery profile as shipping rates (Settings → Shipping and delivery). Sync again after every rule change.",
+    "explanation": "Your rules are written into a delivery profile owned by this app (visible under Settings → Shipping and delivery). Sync again after every rule change.",
     "failed": "Synchronization failed",
     "createdRates": "{count} shipping rates created",
     "tagProfiles": "Tag rules: {created} delivery profile(s) created, {updated} updated, {removed} removed."
@@ -117,7 +117,8 @@
     "excludeTagsUnsupported": "Rule \"{rule}\": exclusion tags aren't supported for profile rules and were ignored.",
     "tagProfileSyncFailed": "Rule \"{rule}\": profile sync failed — {error}",
     "staleTagProfileNotRemoved": "A stale tag profile could not be removed ({error}).",
-    "tagProfileNotRemoved": "A tag profile could not be removed ({error})."
+    "tagProfileNotRemoved": "A tag profile could not be removed ({error}).",
+    "legacyCleanupFailed": "The old rates in the shop's delivery profile could not be removed ({error}). They may appear twice at checkout."
   },
   "errors": {
     "noDeliveryProfile": "No delivery profile found — create one in Shopify under Settings → Shipping.",
@@ -129,7 +130,8 @@
     "needsDeploy": "The shipping function is not deployed yet. Run `shopify app deploy` once in the project.",
     "reauthorizeNeeded": "The app was granted new permissions. Please re-authorize once: {url}",
     "sessionExpired": "Session expired — please reopen or re-authorize the app.",
-    "tokenRefreshFailed": "Could not refresh the access token: {error}"
+    "tokenRefreshFailed": "Could not refresh the access token: {error}",
+    "noLocations": "No active locations found — add a location in Shopify under Settings → Locations."
   },
   "billing": {
     "activeTitle": "Subscription active",

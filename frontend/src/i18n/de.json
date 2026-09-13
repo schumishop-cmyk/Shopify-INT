@@ -81,7 +81,7 @@
     "lastSynced": "Zuletzt synchronisiert: {time}",
     "never": "Noch nie synchronisiert — die Regeln greifen erst nach der ersten Synchronisierung.",
     "button": "Synchronisieren",
-    "explanation": "Deine Regeln werden als Versandtarife in dein Shopify-Versandprofil geschrieben (Einstellungen → Versand und Lieferung). Nach jeder Regeländerung erneut synchronisieren.",
+    "explanation": "Deine Regeln werden in ein eigenes Versandprofil der App geschrieben (sichtbar unter Einstellungen → Versand und Lieferung). Nach jeder Regeländerung erneut synchronisieren.",
     "failed": "Synchronisierung fehlgeschlagen",
     "createdRates": "{count} Versandtarife angelegt",
     "tagProfiles": "Tag-Regeln: {created} Versandprofil(e) angelegt, {updated} aktualisiert, {removed} entfernt."
@@ -117,7 +117,8 @@
     "excludeTagsUnsupported": "Regel „{rule}\": Ausschluss-Tags werden bei Profil-Regeln nicht unterstützt und ignoriert.",
     "tagProfileSyncFailed": "Regel „{rule}\": Profil-Sync fehlgeschlagen — {error}",
     "staleTagProfileNotRemoved": "Veraltetes Tag-Profil konnte nicht entfernt werden ({error}).",
-    "tagProfileNotRemoved": "Tag-Profil konnte nicht entfernt werden ({error})."
+    "tagProfileNotRemoved": "Tag-Profil konnte nicht entfernt werden ({error}).",
+    "legacyCleanupFailed": "Die alten Tarife im Versandprofil des Shops konnten nicht entfernt werden ({error}). Sie erscheinen möglicherweise doppelt im Checkout."
   },
   "errors": {
     "noDeliveryProfile": "Kein Versandprofil gefunden — bitte in Shopify unter Einstellungen → Versand ein Profil anlegen.",
@@ -129,7 +130,8 @@
     "needsDeploy": "Die Versand-Function ist noch nicht deployt. Bitte einmalig `shopify app deploy` im Projekt ausführen.",
     "reauthorizeNeeded": "Die App hat neue Berechtigungen bekommen. Bitte einmal neu autorisieren: {url}",
     "sessionExpired": "Sitzung abgelaufen — bitte die App einmal neu öffnen bzw. autorisieren.",
-    "tokenRefreshFailed": "Zugriffstoken konnte nicht erneuert werden: {error}"
+    "tokenRefreshFailed": "Zugriffstoken konnte nicht erneuert werden: {error}",
+    "noLocations": "Kein aktiver Standort gefunden — bitte in Shopify unter Einstellungen → Standorte einen Standort anlegen."
   },
   "billing": {
     "activeTitle": "Abo aktiv",

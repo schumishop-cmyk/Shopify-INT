@@ -119,6 +119,20 @@ Stand: Juli 2026 · App: **MyBridge** (`client_id 9193536353d7d304a0c2414989304f
   sonst — und ist in der App frei überschreibbar („Bezeichnung im Checkout"),
   damit mehrsprachige Shops selbst entscheiden. Wird das Feld geändert, benennt
   die App den bestehenden Rabatt per `discountAutomaticAppUpdate` um.
+- **Marktgesteuerter Versand (ab Okt 2026):** Shopify verlagert die
+  händlereigene Versandkonfiguration von Lieferprofilen in die Markets API;
+  Schreibzugriffe auf Händler-Profile laufen bei umgestellten Shops
+  **stillschweigend ins Leere**. Die App schreibt ihre Regeln deshalb in ein
+  **app-eigenes Lieferprofil** („Shipping Rules") mit `coversAllItems: true`
+  (`profileSync.syncShopProfile`) — der von Shopify empfohlene Weg, der ohne
+  zusätzliche Scopes auskommt und auf altem wie neuem Modell funktioniert.
+  Standorte kommen aus der `locations`-Query statt aus dem Händler-Profil.
+  Beim ersten Sync nach dem Update werden Alt-Tarife aus dem Händler-Profil
+  entfernt (`removeSyncedProfile`), damit nichts doppelt erscheint.
+  Erfordert API-Version **2026-07** (`coversAllItems` gibt es nicht früher).
+  **Offen:** Kompatibilität per Self-Attestation-Formular bestätigen, und in
+  der Feature-Vorschau prüfen, wie Shopifys Tarifkonsolidierung mit der
+  Combined-Shipping-Function zusammenspielt.
 - **Billing-Lifecycle:** Bei `app_subscriptions/update` mit Status
   `CANCELLED`/`DECLINED`/`EXPIRED`/`FROZEN` (Trial ohne Zahlung ausgelaufen,
   Zahlung fehlgeschlagen, Abo gekündigt) entfernt die App automatisch ihre

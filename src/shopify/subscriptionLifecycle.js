@@ -8,7 +8,7 @@
  * shop resubscribes, a normal sync/save recreates everything without the
  * merchant re-entering anything.
  */
-const { removeSyncedProfile } = require('./profileSync');
+const { removeSyncedProfile, removeAppProfile } = require('./profileSync');
 const { removeAllTagProfiles } = require('./tagProfileSync');
 const { removeCombinedShippingDiscount } = require('./combinedShipping');
 const logger = require('../utils/logger');
@@ -17,9 +17,18 @@ async function teardownBillingLapsed(shop, token) {
   const results = {};
 
   try {
+    results.appProfile = await removeAppProfile(shop, token);
+  } catch (err) {
+    logger.error('Teardown: removing the app delivery profile failed', { shop, error: err.message });
+    results.appProfile = { ok: false, error: err.message };
+  }
+
+  // Shops synced before rules moved into the app-owned profile may still have
+  // our rates sitting in the merchant's default profile
+  try {
     results.profile = await removeSyncedProfile(shop, token);
   } catch (err) {
-    logger.error('Teardown: removing native shipping rates failed', { shop, error: err.message });
+    logger.error('Teardown: removing legacy shipping rates failed', { shop, error: err.message });
     results.profile = { ok: false, error: err.message };
   }
 

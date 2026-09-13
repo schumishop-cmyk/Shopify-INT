@@ -90,6 +90,9 @@ for (const stmt of [
   `ALTER TABLE shops ADD COLUMN refresh_token TEXT`,
   `ALTER TABLE shops ADD COLUMN token_expires_at TEXT`,
   `ALTER TABLE shops ADD COLUMN refresh_token_expires_at TEXT`,
+  // Market-driven shipping: rules now live in an app-owned delivery profile
+  // instead of the merchant's default profile
+  `ALTER TABLE shops ADD COLUMN app_profile_gid TEXT`,
 ]) {
   try { db.exec(stmt); } catch { /* column already exists */ }
 }

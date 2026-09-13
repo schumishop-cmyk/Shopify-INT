@@ -38,7 +38,7 @@ redirect_urls = [
 #     eingetragen (URLs: /webhooks/customers/data_request, .../customers/redact,
 #     .../shop/redact). Nötig für die App-Store-Einreichung.
 [webhooks]
-api_version = "2026-01"
+api_version = "2026-07"
 
   # GDPR-Pflicht-Webhooks — im neuen Dev Dashboard Teil der versionierten
   # Konfiguration (kein Einstellungs-Formular); wird per `shopify app deploy`

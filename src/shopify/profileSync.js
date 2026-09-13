@@ -289,95 +289,216 @@ function cloneDef(def) {
   return JSON.parse(JSON.stringify(def));
 }
 
+// ── App-owned profile (market-driven shipping) ───────────────────────────────
+// Merchant delivery profiles are deprecated as of API 2026-07: on shops that
+// moved to market-driven shipping, writes to them silently do nothing. Rules
+// therefore live in a profile this app owns, which keeps working on both the
+// old and the new model. coversAllItems makes it apply to every shippable item
+// without enumerating variants (2026-07+).
+const APP_PROFILE_NAME = 'Shipping Rules';
+
+const SHOP_LOCATIONS_QUERY = `
+  query AppProfileContext {
+    shop { currencyCode }
+    locations(first: 50, includeInactive: false) {
+      nodes { id }
+    }
+  }
+`;
+
+const APP_PROFILE_STATE_QUERY = `
+  query AppProfileState($id: ID!) {
+    deliveryProfile(id: $id) {
+      id
+      profileLocationGroups {
+        locationGroup { id }
+        locationGroupZones(first: 50) {
+          edges {
+            node {
+              zone { id }
+              methodDefinitions(first: 100) { edges { node { id } } }
+            }
+          }
+        }
+      }
+    }
+  }
+`;
+
+const APP_PROFILE_CREATE = `
+  mutation deliveryProfileCreate($profile: DeliveryProfileInput!) {
+    deliveryProfileCreate(profile: $profile) {
+      profile { id }
+      userErrors { field message }
+    }
+  }
+`;
+
+const APP_PROFILE_REMOVE = `
+  mutation deliveryProfileRemove($id: ID!) {
+    deliveryProfileRemove(id: $id) {
+      job { id }
+      userErrors { field message }
+    }
+  }
+`;
+
 // ── DB statements ────────────────────────────────────────────────────────────
 const listTracked = db.prepare(`SELECT kind, gid FROM synced_resources WHERE shop = ? AND kind IN ('zone', 'method_definition')`);
+const readAppProfile = db.prepare(`SELECT app_profile_gid FROM shops WHERE shop = ?`);
+const saveAppProfile = db.prepare(`UPDATE shops SET app_profile_gid = @gid WHERE shop = @shop`);
 // Only clears default-profile resources — tag-rule profiles (kind='profile')
 // are managed by tagProfileSync and must survive this
 const clearTracked = db.prepare(`DELETE FROM synced_resources WHERE shop = ? AND kind IN ('zone', 'method_definition')`);
 const insertTracked = db.prepare(`INSERT INTO synced_resources (shop, kind, gid) VALUES (?, ?, ?)`);
 const touchSynced = db.prepare(`UPDATE shops SET last_synced_at = datetime('now') WHERE shop = ?`);
 
+/** Reads the shop's currency and active locations, independent of any profile. */
+async function fetchShopContext(shop, token) {
+  const res = await adminGraphql(shop, token, SHOP_LOCATIONS_QUERY);
+  if (res.errors) throw new Error(res.errors.map((e) => e.message).join('; '));
+  return {
+    currencyCode: res.data?.shop?.currencyCode || 'EUR',
+    locationIds: (res.data?.locations?.nodes || []).map((n) => n.id),
+  };
+}
+
+/** Reads our own profile's current zones/rates, or null if it's gone. */
+async function fetchAppProfileState(shop, token, gid) {
+  const res = await adminGraphql(shop, token, APP_PROFILE_STATE_QUERY, { id: gid });
+  if (res.errors) throw new Error(res.errors.map((e) => e.message).join('; '));
+  const profile = res.data?.deliveryProfile;
+  if (!profile) return null; // deleted in the admin
+
+  const lg = profile.profileLocationGroups?.[0];
+  const zoneEdges = lg?.locationGroupZones?.edges || [];
+  return {
+    locationGroupId: lg?.locationGroup?.id,
+    zoneIds: zoneEdges.map((e) => e.node.zone.id),
+    methodDefinitionIds: zoneEdges.flatMap((e) =>
+      (e.node.methodDefinitions?.edges || []).map((d) => d.node.id)
+    ),
+  };
+}
+
+function extractUserErrors(res, key) {
+  return res.errors || res.data?.[key]?.userErrors || [];
+}
+
 /**
- * Executes a full sync for a shop: query profile → plan → mutate → re-track.
+ * Executes a full sync for a shop into the app-owned delivery profile:
+ * read context → plan zones → create or replace the profile's contents.
  */
 async function syncShopProfile(shop, token, rules) {
-  const queryRes = await adminGraphql(shop, token, PROFILE_QUERY);
-  if (queryRes.errors) {
-    return { ok: false, error: queryRes.errors.map((e) => e.message).join('; ') };
+  let context;
+  try {
+    context = await fetchShopContext(shop, token);
+  } catch (err) {
+    return { ok: false, error: err.message };
   }
-
-  const profile = normalizeProfile(queryRes.data);
-  if (!profile) {
+  if (context.locationIds.length === 0) {
     return {
       ok: false,
-      errorCode: 'noDeliveryProfile',
-      error: 'No delivery profile found — create one in Shopify under Settings → Shipping.',
+      errorCode: 'noLocations',
+      error: 'No active locations found — add a location in Shopify under Settings → Locations.',
     };
   }
 
-  const tracked = listTracked.all(shop);
-  const trackedDefs = tracked.filter((t) => t.kind === 'method_definition').map((t) => t.gid);
-  const trackedZones = tracked.filter((t) => t.kind === 'zone').map((t) => t.gid);
+  // We own every zone in this profile, so it is planned from scratch against an
+  // empty profile and replaces whatever was there before.
+  const { input, warnings, skipped } = buildSyncPlan(rules, {
+    profileId: null,
+    locationGroupId: null,
+    locationIds: context.locationIds,
+    zones: [],
+    currencyCode: context.currencyCode,
+    multipleLocationGroups: false,
+  });
+  const zonesToCreate = input.locationGroupsToUpdate?.[0]?.zonesToCreate || [];
 
-  const { input, warnings, skipped } = buildSyncPlan(rules, profile, trackedDefs, trackedZones);
-
-  const mutRes = await adminGraphql(shop, token, PROFILE_MUTATION, { id: profile.profileId, profile: input });
-  if (mutRes.errors) {
-    return { ok: false, error: mutRes.errors.map((e) => e.message).join('; '), warnings };
+  let gid = readAppProfile.get(shop)?.app_profile_gid || null;
+  let state = null;
+  if (gid) {
+    try {
+      state = await fetchAppProfileState(shop, token, gid);
+    } catch (err) {
+      return { ok: false, error: err.message, warnings };
+    }
+    if (!state) gid = null; // merchant deleted it — recreate below
   }
 
-  const userErrors = mutRes.data?.deliveryProfileUpdate?.userErrors || [];
-  if (userErrors.length > 0) {
-    return { ok: false, error: userErrors.map((e) => e.message).join('; '), warnings };
+  let createdRates = 0;
+  let deletedRates = 0;
+
+  try {
+    if (!gid) {
+      const res = await adminGraphql(shop, token, APP_PROFILE_CREATE, {
+        profile: {
+          name: APP_PROFILE_NAME,
+          coversAllItems: true,
+          locationGroupsToCreate: [{ locations: context.locationIds, zonesToCreate }],
+        },
+      });
+      const errors = extractUserErrors(res, 'deliveryProfileCreate');
+      if (errors.length) throw new Error(errors.map((e) => e.message).join('; '));
+      gid = res.data.deliveryProfileCreate.profile.id;
+      logger.info('App delivery profile created', { shop, gid });
+    } else {
+      // Replace the whole contents: drop our previous zones/rates, add the new ones
+      deletedRates = state.methodDefinitionIds.length;
+      const res = await adminGraphql(shop, token, PROFILE_MUTATION, {
+        id: gid,
+        profile: {
+          ...(state.methodDefinitionIds.length ? { methodDefinitionsToDelete: state.methodDefinitionIds } : {}),
+          ...(state.zoneIds.length ? { zonesToDelete: state.zoneIds } : {}),
+          coversAllItems: true,
+          locationGroupsToUpdate: [{ id: state.locationGroupId, zonesToCreate }],
+        },
+      });
+      const errors = extractUserErrors(res, 'deliveryProfileUpdate');
+      if (errors.length) throw new Error(errors.map((e) => e.message).join('; '));
+    }
+  } catch (err) {
+    return { ok: false, error: err.message, warnings };
   }
 
-  // Diff response against pre-sync state to learn which IDs we now own
-  const before = {
-    zoneIds: new Set(profile.zones.map((z) => z.id)),
-    defIds: new Set(profile.zones.flatMap((z) => z.methodDefinitionIds)),
-  };
-  const preservedTrackedZones = new Set(trackedZones);
+  createdRates = zonesToCreate.reduce((n, z) => n + (z.methodDefinitionsToCreate?.length || 0), 0);
 
-  const after = { zones: [], defs: [] };
-  for (const lg of mutRes.data.deliveryProfileUpdate.profile.profileLocationGroups || []) {
-    for (const { node } of lg.locationGroupZones?.edges || []) {
-      after.zones.push(node.zone.id);
-      for (const { node: def } of node.methodDefinitions?.edges || []) {
-        after.defs.push(def.id);
-      }
+  saveAppProfile.run({ shop, gid });
+  touchSynced.run(shop);
+
+  // One-time migration: rules used to be written into the merchant's default
+  // profile. Those rates are now duplicates, so remove what we put there.
+  const leftovers = listTracked.all(shop);
+  if (leftovers.length > 0) {
+    const cleanup = await removeSyncedProfile(shop, token);
+    if (cleanup.ok) {
+      logger.info('Migrated rules out of the merchant profile', { shop, removed: leftovers.length });
+    } else {
+      warnings.push({ code: 'legacyCleanupFailed', params: { error: cleanup.error } });
     }
   }
 
-  const newZoneIds = after.zones.filter((id) => !before.zoneIds.has(id) || preservedTrackedZones.has(id));
-  const newDefIds = after.defs.filter((id) => !before.defIds.has(id));
-
-  const retrack = db.transaction(() => {
-    clearTracked.run(shop);
-    newZoneIds.forEach((gid) => insertTracked.run(shop, 'zone', gid));
-    newDefIds.forEach((gid) => insertTracked.run(shop, 'method_definition', gid));
-    touchSynced.run(shop);
-  });
-  retrack();
-
-  // Tag rules (e.g. Sperrgut) live in product-specific delivery profiles
+  // Tag rules (e.g. Sperrgut) live in their own product-specific profiles
   const { syncTagProfiles } = require('./tagProfileSync');
   const tagResult = await syncTagProfiles(shop, token, rules, {
-    locationIds: profile.locationIds,
-    currencyCode: profile.currencyCode,
+    locationIds: context.locationIds,
+    currencyCode: context.currencyCode,
   });
 
   logger.info('Profile sync complete', {
     shop,
-    createdDefs: newDefIds.length,
-    deletedDefs: input.methodDefinitionsToDelete?.length || 0,
+    gid,
+    createdRates,
+    deletedRates,
     tagProfiles: tagResult,
     warnings: warnings.length + tagResult.warnings.length,
   });
 
   return {
     ok: true,
-    createdRates: newDefIds.length,
-    deletedRates: input.methodDefinitionsToDelete?.length || 0,
+    createdRates,
+    deletedRates,
     tagProfiles: {
       created: tagResult.created,
       updated: tagResult.updated,
@@ -389,10 +510,28 @@ async function syncShopProfile(shop, token, rules) {
 }
 
 /**
- * Removes every zone/rate this app has ever added to the shop's default
- * delivery profile, leaving the merchant's own zones and rates untouched.
- * Used when billing lapses so the store reverts to its pre-app shipping
- * setup; the tracked GIDs are only cleared after Shopify confirms deletion.
+ * Deletes the app-owned delivery profile, taking its rates with it. Used when
+ * billing lapses. A profile the merchant already removed counts as success.
+ */
+async function removeAppProfile(shop, token) {
+  const gid = readAppProfile.get(shop)?.app_profile_gid;
+  if (!gid) return { ok: true, removed: false };
+
+  const res = await adminGraphql(shop, token, APP_PROFILE_REMOVE, { id: gid });
+  const errors = extractUserErrors(res, 'deliveryProfileRemove');
+  if (errors.length && !errors.some((e) => /does not exist|not found/i.test(e.message))) {
+    return { ok: false, error: errors.map((e) => e.message).join('; ') };
+  }
+
+  saveAppProfile.run({ shop, gid: null });
+  return { ok: true, removed: true };
+}
+
+/**
+ * Removes every zone/rate this app once added to the shop's default delivery
+ * profile, leaving the merchant's own zones and rates untouched. Still needed
+ * to clean up shops synced before rules moved into the app-owned profile; the
+ * tracked GIDs are only cleared after Shopify confirms deletion.
  */
 async function removeSyncedProfile(shop, token) {
   const tracked = listTracked.all(shop);
@@ -434,5 +573,6 @@ async function removeSyncedProfile(shop, token) {
 }
 
 module.exports = {
-  buildSyncPlan, buildMethodDefinitions, normalizeProfile, syncShopProfile, removeSyncedProfile,
+  buildSyncPlan, buildMethodDefinitions, normalizeProfile, syncShopProfile,
+  removeSyncedProfile, removeAppProfile,
 };

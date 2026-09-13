@@ -1,6 +1,8 @@
 const https = require('https');
 
-const API_VERSION = '2026-01';
+// 2026-07 is the first version exposing DeliveryProfile.coversAllItems, which
+// the app-owned profile sync depends on (market-driven shipping migration).
+const API_VERSION = '2026-07';
 
 /**
  * Normalizes Shopify's various error shapes into a consistent array of

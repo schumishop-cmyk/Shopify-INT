@@ -1,5 +1,9 @@
 const mockRemoveSyncedProfile = jest.fn();
-jest.mock('../profileSync', () => ({ removeSyncedProfile: (...a) => mockRemoveSyncedProfile(...a) }));
+const mockRemoveAppProfile = jest.fn();
+jest.mock('../profileSync', () => ({
+  removeSyncedProfile: (...a) => mockRemoveSyncedProfile(...a),
+  removeAppProfile: (...a) => mockRemoveAppProfile(...a),
+}));
 
 const mockRemoveAllTagProfiles = jest.fn();
 jest.mock('../tagProfileSync', () => ({ removeAllTagProfiles: (...a) => mockRemoveAllTagProfiles(...a) }));
@@ -14,14 +18,17 @@ const TOKEN = 'tok';
 
 beforeEach(() => {
   mockRemoveSyncedProfile.mockReset().mockResolvedValue({ ok: true, removedRates: 1, removedZones: 1 });
+  mockRemoveAppProfile.mockReset().mockResolvedValue({ ok: true, removed: true });
   mockRemoveAllTagProfiles.mockReset().mockResolvedValue({ ok: true, removed: 1, warnings: [] });
   mockRemoveDiscount.mockReset().mockResolvedValue({ ok: true, removed: true });
 });
 
 describe('teardownBillingLapsed', () => {
-  test('removes all three kinds of live data', async () => {
+  test('removes all kinds of live data, including the app-owned profile', async () => {
     const res = await teardownBillingLapsed(SHOP, TOKEN);
 
+    expect(mockRemoveAppProfile).toHaveBeenCalledWith(SHOP, TOKEN);
+    expect(res.appProfile.ok).toBe(true);
     expect(mockRemoveSyncedProfile).toHaveBeenCalledWith(SHOP, TOKEN);
     expect(mockRemoveAllTagProfiles).toHaveBeenCalledWith(SHOP, TOKEN);
     expect(mockRemoveDiscount).toHaveBeenCalledWith(SHOP, TOKEN);
