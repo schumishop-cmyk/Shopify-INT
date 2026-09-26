@@ -129,10 +129,18 @@ Stand: Juli 2026 · App: **MyBridge** (`client_id 9193536353d7d304a0c2414989304f
   Standorte kommen aus der `locations`-Query statt aus dem Händler-Profil.
   Beim ersten Sync nach dem Update werden Alt-Tarife aus dem Händler-Profil
   entfernt (`removeSyncedProfile`), damit nichts doppelt erscheint.
-  Erfordert API-Version **2026-07** (`coversAllItems` gibt es nicht früher).
-  **Offen:** Kompatibilität per Self-Attestation-Formular bestätigen, und in
-  der Feature-Vorschau prüfen, wie Shopifys Tarifkonsolidierung mit der
-  Combined-Shipping-Function zusammenspielt.
+  Erfordert API-Version **2026-07** (`coversAllItems` gibt es nicht früher);
+  die Combined-Shipping-Function-Extension wurde ebenfalls auf 2026-07 gehoben.
+  - **Im Dev-Store mit Feature-Vorschau „Market-driven shipping" verifiziert
+    (Sept 2026):**
+    - Sperrgut-Tag-Aufpreis greift im Checkout korrekt trotz `coversAllItems`
+      des Hauptprofils — kein Überschreiben der Tag-Profil-Raten.
+    - Kombinierter Versand berechnet im Checkout den konfigurierten Wunschpreis
+      korrekt; **keine** Doppel-Rabattierung mit Shopifys Tarifkonsolidierung.
+    - Beides auf Basic-Plan getestet.
+  - **Noch offen:** Self-Attestation-Formular im Partner Dashboard einreichen
+    (entfernt die Kompatibilitätswarnung bei Neuinstallationen und erlaubt
+    Shopify, Bestandshändler automatisch umzustellen).
 - **Billing-Lifecycle:** Bei `app_subscriptions/update` mit Status
   `CANCELLED`/`DECLINED`/`EXPIRED`/`FROZEN` (Trial ohne Zahlung ausgelaufen,
   Zahlung fehlgeschlagen, Abo gekündigt) entfernt die App automatisch ihre
