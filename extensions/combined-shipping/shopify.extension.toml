@@ -1,6 +1,9 @@
 # Discount Function — kombinierte Versandkosten bei Bestellungen aus
 # mehreren Standorten. Deploy: siehe README.md in diesem Verzeichnis.
-api_version = "2026-01"
+# Auf 2026-07 gehoben, passend zur Admin-API (market-driven shipping). Die
+# Discount-Function-API (cart.delivery-options.discounts.generate.run) ist
+# zwischen 2026-01 und 2026-07 unverändert — Input/Output identisch.
+api_version = "2026-07"
 
 [[extensions]]
 name = "Kombinierter Versand"
